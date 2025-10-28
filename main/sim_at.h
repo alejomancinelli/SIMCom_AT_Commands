@@ -260,6 +260,7 @@ sim_at_err_t sim_at_enable_debug(bool en);
 const char* sim_at_err_to_str(sim_at_err_t err);
 
 void get_sim_at_response(char* buf);
+void ignore_sim_response(void);
 
 #ifdef __cplusplus
 }

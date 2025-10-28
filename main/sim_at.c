@@ -80,6 +80,12 @@ void get_sim_at_response(char *buf)
     if (s_resp_tail >= SIM_AT_MAX_LINES) s_resp_tail = 0;
 }
 
+void ignore_sim_response(void)
+{
+    s_resp_tail++;
+    if (s_resp_tail >= SIM_AT_MAX_LINES) s_resp_tail = 0;
+}
+
 /* write raw command to UART (blocking) */
 static sim_at_err_t prv_uart_write_cmd(const char *cmd)
 {
@@ -254,9 +260,9 @@ sim_at_err_t sim_at_init(const sim_at_config_t *cfg)
     /* disable echo by default to simplify parsing (try but tolerate failure) */
     char resp[SIM_AT_MAX_RESP_LEN];
     sim_at_cmd_sync("AT\r\n", 2000);
-    get_sim_at_response(resp);
+    ignore_sim_response();
     sim_at_cmd_sync("ATE0\r\n", 2000);
-    get_sim_at_response(resp);
+    ignore_sim_response();
 
     ESP_LOGI(TAG, "sim_at initialized");
     return SIM_AT_OK;
@@ -329,9 +335,32 @@ sim_at_err_t sim_at_cmd_sync(const char *cmd, uint32_t timeout_ms)
         return SIM_AT_ERR_TIMEOUT;
     }
 
-    // TODO: Falta devolver la respuesta!
-    // Esto en realidad o lo pongo en una cola, o me fijo directmamente en el buffer, no sé
-    // Alguna función que sea tipo read_buffer, no sé
+    return SIM_AT_OK;
+}
+
+sim_at_err_t sim_at_cmd_sync_ignore_response(const char *cmd, uint32_t timeout_ms, uint8_t num_responses)
+{
+    if (!g_inited)
+        return SIM_AT_ERR_NOT_INIT;
+    if (strlen(cmd) >= SIM_AT_MAX_CMD_LEN)
+        return SIM_AT_ERR_INVALID_ARG;
+
+    sim_at_err_t r = prv_uart_write_cmd(cmd);
+    if (r != SIM_AT_OK)
+    {
+        ESP_LOGE(TAG, "Error sending UART data");
+        return r;
+    }
+
+    /* wait for completion */
+    TickType_t wait_ticks = pdMS_TO_TICKS((timeout_ms == 0) ? g_cfg.default_cmd_timeout_ms : timeout_ms);
+    if (xSemaphoreTake(s_sync_sem, wait_ticks) == pdFALSE)
+    {
+        return SIM_AT_ERR_TIMEOUT;
+    }
+
+    for (int i=0; i<num_responses; i++)
+        ignore_sim_response();
 
     return SIM_AT_OK;
 }

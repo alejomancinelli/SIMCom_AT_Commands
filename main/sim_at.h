@@ -172,7 +172,7 @@ sim_at_err_t sim_at_deinit(void);
  *
  * Blocking call — do not call from ISR.
  */
-sim_at_err_t sim_at_cmd_sync(const char *cmd, char *resp_buf, size_t resp_buf_len, uint32_t timeout_ms);
+sim_at_err_t sim_at_cmd_sync(const char *cmd, uint32_t timeout_ms);
 
 /**
  * Send an AT command asynchronously.
@@ -256,6 +256,10 @@ sim_at_err_t mqtt_subscribe(const char *topic, uint8_t qos, void (*msg_cb)(const
  * This is a runtime toggle in case you want to reduce logs for low-power testing.
  */
 sim_at_err_t sim_at_enable_debug(bool en);
+
+const char* sim_at_err_to_str(sim_at_err_t err);
+
+void get_sim_at_response(char* buf);
 
 #ifdef __cplusplus
 }

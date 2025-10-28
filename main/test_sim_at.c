@@ -1,14 +1,8 @@
 #include "sim_at.h"
 #include "esp_log.h"
+#include "sim_status_control_at.h"
 
 static const char *TAG = "SIM_AT_TEST";
-
-/* Async callback example */
-static void async_cb(const sim_at_response_t *resp)
-{
-    ESP_LOGI(TAG, "ASYNC CB: cmd='%s', resp='%s', final_code=%d",
-             resp->cmd, resp->raw, resp->final_code);
-}
 
 void app_main(void)
 {
@@ -43,11 +37,12 @@ void app_main(void)
     vTaskDelay(pdMS_TO_TICKS(2000));
     
     /* --- 1. Send basic AT --- */
-    char resp[128];
+    char resp[SIM_AT_MAX_RESP_LEN];
     for (int i=0; i<5; i++)
     {
         ESP_LOGI(TAG, "Sending 'AT'...");
-        err = sim_at_cmd_sync("AT\r\n", resp, sizeof(resp), 1000);
+        err = sim_at_cmd_sync("AT\r\n", 1000);
+        get_sim_at_response(resp);
         // if (err == SIM_AT_OK)
         //     // ESP_LOGI(TAG, "SYNC OK: resp='%s'", resp);
         // else
@@ -63,9 +58,16 @@ void app_main(void)
     // vTaskDelay(pdMS_TO_TICKS(4000));  // allow async cb to print
 
     // /* --- 3. Send shutdown command --- */
-    ESP_LOGI(TAG, "Sending 'AT+CFUN=0' (shutdown)...");
-    err = sim_at_cmd_sync("AT+CFUN?\r\n", resp, sizeof(resp), 5000);
-    err = sim_at_cmd_sync("AT+CFUN=0\r\n", resp, sizeof(resp), 5000);
+    
+    sim_status_control_fun_t phone_functionality;
+    err = get_phone_functionality(&phone_functionality);
+    if (phone_functionality == MINIMUN_FUNCTIONALITY)
+        ESP_LOGI(TAG, "Phone with minimun functionality!");
+    if (phone_functionality == FULL_FUNCTIONALITY)
+        ESP_LOGI(TAG, "Phone with full functionality!");
+    
+    err = sim_at_cmd_sync("AT+CFUN=0\r\n", 5000);
+    
     if (err == SIM_AT_OK)
         ESP_LOGI(TAG, "Shutdown command OK, resp='%s'", resp);
     else

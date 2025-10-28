@@ -21,6 +21,7 @@ typedef enum {
 } sim_status_control_fun_t;
 
 sim_at_err_t get_phone_functionality(sim_status_control_fun_t* fun);
+sim_at_err_t set_phone_functionality(sim_status_control_fun_t fun);
 
 #ifdef __cplusplus
 }

@@ -29,3 +29,23 @@ sim_at_err_t get_phone_functionality(sim_status_control_fun_t* fun)
     
     return SIM_AT_OK;
 }
+
+sim_at_err_t set_phone_functionality(sim_status_control_fun_t fun)
+{
+    char cmd[SIM_AT_MAX_CMD_LEN];
+    snprintf(cmd, SIM_AT_MAX_CMD_LEN, "AT+CFUN=%d,1\r\n", fun);
+    sim_at_err_t err = sim_at_cmd_sync(cmd, 2000);
+    if (err != SIM_AT_OK)
+    {   
+        ESP_LOGE(TAG, "Error with AT+CFUN=%d,1 commands: %s", fun, sim_at_err_to_str(err));
+        return err;
+    }
+    
+    // Reads response
+    char resp[SIM_AT_MAX_RESP_LEN];
+    get_sim_at_response(resp);
+    if (strstr(resp, "OK") == NULL)
+        return SIM_AT_ERR_INVALID_ARG; // TODO: Poner otro, o analizar el error después
+    
+    return SIM_AT_OK;
+}

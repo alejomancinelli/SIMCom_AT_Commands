@@ -42,7 +42,7 @@ void app_main(void)
     {
         ESP_LOGI(TAG, "Sending 'AT'...");
         err = sim_at_cmd_sync("AT\r\n", 1000);
-        get_sim_at_response(resp);
+        ignore_sim_response();
         // if (err == SIM_AT_OK)
         //     // ESP_LOGI(TAG, "SYNC OK: resp='%s'", resp);
         // else
@@ -66,7 +66,7 @@ void app_main(void)
     if (phone_functionality == FULL_FUNCTIONALITY)
         ESP_LOGI(TAG, "Phone with full functionality!");
     
-    err = sim_at_cmd_sync("AT+CFUN=0\r\n", 5000);
+    err = set_phone_functionality(FULL_FUNCTIONALITY);
     
     if (err == SIM_AT_OK)
         ESP_LOGI(TAG, "Shutdown command OK, resp='%s'", resp);

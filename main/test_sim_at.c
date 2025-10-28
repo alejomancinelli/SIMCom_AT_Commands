@@ -1,6 +1,7 @@
 #include "sim_at.h"
 #include "esp_log.h"
 #include "sim_status_control_at.h"
+#include "sim_network_at.h"
 
 static const char *TAG = "SIM_AT_TEST";
 
@@ -70,6 +71,9 @@ void app_main(void)
     query_signal_quality(&rssi, &ber);
     ESP_LOGI(TAG, "rssi: %d, ber: %d", rssi, ber);
     
+    sim_network_registration_stat_t stat;
+    network_registration(&stat);
+
     ESP_LOGI(TAG, "Shutting down SIMCom module");
     // power_down_module();
     

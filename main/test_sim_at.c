@@ -66,12 +66,12 @@ void app_main(void)
     if (phone_functionality == FULL_FUNCTIONALITY)
         ESP_LOGI(TAG, "Phone with full functionality!");
     
-    err = set_phone_functionality(FULL_FUNCTIONALITY);
+    int rssi = 0, ber = 0; 
+    query_signal_quality(&rssi, &ber);
+    ESP_LOGI(TAG, "rssi: %d, ber: %d", rssi, ber);
     
-    if (err == SIM_AT_OK)
-        ESP_LOGI(TAG, "Shutdown command OK, resp='%s'", resp);
-    else
-        ESP_LOGE(TAG, "Shutdown command failed: %d", err);
-
+    ESP_LOGI(TAG, "Shutting down SIMCom module");
+    // power_down_module();
+    
     ESP_LOGI(TAG, "Test done.");
 }

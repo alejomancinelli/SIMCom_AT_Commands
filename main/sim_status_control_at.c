@@ -24,8 +24,8 @@ sim_at_err_t get_phone_functionality(sim_status_control_fun_t* fun)
     p++;
     *fun = atoi(p);
     
-    // Reads OK
-    get_sim_at_response(resp);
+    // Ignores OK
+    ignore_sim_response();    
     
     return SIM_AT_OK;
 }
@@ -48,4 +48,63 @@ sim_at_err_t set_phone_functionality(sim_status_control_fun_t fun)
         return SIM_AT_ERR_INVALID_ARG; // TODO: Poner otro, o analizar el error después
     
     return SIM_AT_OK;
+}
+
+sim_at_err_t query_signal_quality(int* rssi, int* ber)
+{
+    sim_at_err_t err = sim_at_cmd_sync("AT+CSQ\r\n", 2000);
+    if (err != SIM_AT_OK)
+    {   
+        ESP_LOGE(TAG, "Error with AT+CSQ commands: %s", sim_at_err_to_str(err));
+        return err;
+    }
+    
+    // Reads response
+    char resp[SIM_AT_MAX_RESP_LEN];
+    get_sim_at_response(resp);
+    if (strstr(resp, "+CSQ") == NULL)
+        return SIM_AT_ERR_INVALID_ARG; // TODO: Poner otro, o analizar el error después
+    
+    const char *p = strchr(resp, ':');
+    if (!p) return -1; // invalid format
+    while (*p == ':' || *p == ' ' || *p == '\t')
+        p++;
+    // Parse two integers separated by a comma
+    if (sscanf(p, "%d,%d", rssi, ber) != 2)
+        return SIM_AT_ERR_INVALID_ARG;
+
+    // Ignore OK
+    ignore_sim_response();
+
+    return SIM_AT_OK; 
+}
+
+sim_at_err_t power_down_module(void)
+{
+    sim_at_err_t err = sim_at_cmd_sync("AT+CPOF\r\n", 2000);
+    if (err != SIM_AT_OK)
+    {   
+        ESP_LOGE(TAG, "Error with AT+CPOF command: %s", sim_at_err_to_str(err));
+        return err;
+    }
+    
+    // Ignore OK
+    ignore_sim_response();
+
+    return SIM_AT_OK; 
+}
+
+sim_at_err_t reset_module(void)
+{
+    sim_at_err_t err = sim_at_cmd_sync("AT+CRESET\r\n", 2000);
+    if (err != SIM_AT_OK)
+    {   
+        ESP_LOGE(TAG, "Error with AT+CRESET command: %s", sim_at_err_to_str(err));
+        return err;
+    }
+    
+    // Ignore OK
+    ignore_sim_response();
+
+    return SIM_AT_OK; 
 }

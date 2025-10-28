@@ -74,6 +74,10 @@ const char *sim_at_err_to_str(sim_at_err_t err)
     return "INVALID ERR";
 }
 
+// TODO: Falta analizar los casos en que el módulo envía respuestas a eventos que no fueron requeridos,
+// como SMSs o qsy
+// I (3278) sim_at: <-- QCRDY
+// I (3498) sim_at: <-- +CPIN: NOT INSERTED
 void get_sim_at_response(char *buf)
 {
     strncpy(buf, s_responses[s_resp_tail++], SIM_AT_MAX_RESP_LEN - 1);

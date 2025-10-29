@@ -4,6 +4,7 @@
 #include "sim_network_at.h"
 #include "sim_simcard_at.h"
 #include "sim_packet_domain_at.h"
+#include "sim_mqtt_at.h"
 
 static const char *TAG = "SIM_AT_TEST";
 

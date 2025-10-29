@@ -1,5 +1,5 @@
-#ifndef SIM_PATCKET_DOMAIN_AT_H
-#define SIM_PATCKET_DOMAIN_AT_H
+#ifndef SIM_PACKET_DOMAIN_AT_H
+#define SIM_PACKET_DOMAIN_AT_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -70,4 +70,4 @@ sim_at_err_t ping(char* dest_addr);
 }
 #endif
 
-#endif /* SIM_PATCKET_DOMAIN_AT_H */
+#endif /* SIM_PACKET_DOMAIN_AT_H */

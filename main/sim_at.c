@@ -35,6 +35,7 @@ static char s_responses[SIM_AT_MAX_LINES][SIM_AT_MAX_RESP_LEN];
 static int s_resp_head = 0;  // write index
 static int s_resp_tail = 0;  // read index
 static int s_resp_count = 0; // number of stored responses
+// TODO: Antes de ver las respuesta el s_resp_count se debería reinicializar a 0
 
 static char s_line_buf[SIM_AT_MAX_RESP_LEN];
 static int s_line_pos = 0;

@@ -17,7 +17,7 @@ extern "C" {
  * [ ] AT+CEREG         = EPS network registration status
  * [x] AT+CGATT         = Packet domain attach or detach
  * [x] AT+CGACT         = PDP context activate or deactivate
- * [ ] AT+CGDCONT       = Define PDP context
+ * [x] AT+CGDCONT       = Define PDP context
  * [ ] AT+CGDSCONT      = Define Secondary PDP Context
  * [ ] AT+CGTFT         = Traffic Flow Template
  * [ ] AT+CGQREQ        = Quality of service profile (requested)
@@ -45,15 +45,24 @@ typedef enum {
     GPRS_EMERGENCY = 11,
 } sim_gprs_network_registration_stat_t;
 
+typedef enum {
+    PDP_IP = 0,
+    PDP_IPV6, 
+    PDP_IPV4V6,
+} sim_pdp_type_t;
+
 sim_at_err_t gprs_network_registration(sim_gprs_network_registration_stat_t* stat);
 
-sim_at_err_t get_packet_domain_attach(bool* state);
-sim_at_err_t set_packet_domain_attach(bool state);
+sim_at_err_t get_packet_domain_attach(int* state);
+sim_at_err_t set_packet_domain_attach(int state);
 
-sim_at_err_t get_pdp_context_activate(int* sid, int* state);
-sim_at_err_t set_pdp_context_activate(int sid, int state);
+sim_at_err_t get_pdp_context_activate(int* cid, int* state);
+sim_at_err_t set_pdp_context_activate(int cid, int state);
 
-sim_at_err_t show_pdp_address(int* sid, char* addr);
+sim_at_err_t get_pdp_context();
+sim_at_err_t set_pdp_context(int cid, sim_pdp_type_t pdp_type, char* apn);
+
+sim_at_err_t show_pdp_address(int* cid, char* addr);
 
 sim_at_err_t ping(char* dest_addr);
 

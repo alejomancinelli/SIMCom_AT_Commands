@@ -23,7 +23,7 @@ sim_at_err_t get_simcard_pin_info(sim_simcard_pin_code_t* code)
         p++;
     // Parse two integers separated by a comma
     char code_str[16];
-    if (sscanf(p, "%s", resp) != 1)
+    if (sscanf(p, "%s", code_str) != 1)
         return SIM_AT_ERR_INVALID_ARG;
     
     if (strcmp(code_str, "READY") == 0)
@@ -40,6 +40,8 @@ sim_at_err_t get_simcard_pin_info(sim_simcard_pin_code_t* code)
         *code = SIM_PUK_2;
     else if (strcmp(code_str, "PH-NET PIN") == 0)
         *code = PH_NET_PIN;
+    else
+        ESP_LOGE(TAG, "The SIM Card code was not recognized: %s", code_str);
 
     // Ignore OK
     ignore_sim_response();

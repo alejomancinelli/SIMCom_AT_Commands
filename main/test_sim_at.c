@@ -3,6 +3,7 @@
 #include "sim_status_control_at.h"
 #include "sim_network_at.h"
 #include "sim_simcard_at.h"
+#include "sim_packet_domain_at.h"
 
 static const char *TAG = "SIM_AT_TEST";
 
@@ -78,6 +79,22 @@ void app_main(void)
 
     sim_network_registration_stat_t stat;
     network_registration(&stat);
+
+    sim_gprs_network_registration_stat_t gprs_stat;
+    gprs_network_registration(&gprs_stat);
+
+    int attach;
+    get_packet_domain_attach(&attach);
+
+    int cid, state;
+    get_pdp_context_activate(&cid, &state);
+
+    get_pdp_context();
+
+    char addr[32];
+    show_pdp_address(&cid, addr);
+
+    ping("www.google.com.ar");
 
     ESP_LOGI(TAG, "Shutting down SIMCom module");
     // power_down_module();

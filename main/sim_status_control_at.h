@@ -53,4 +53,4 @@ sim_at_err_t reset_module(void);
 }
 #endif
 
-#endif /* SIM_STATUS_CONTROL_AT_*/
+#endif /* SIM_STATUS_CONTROL_AT_H*/

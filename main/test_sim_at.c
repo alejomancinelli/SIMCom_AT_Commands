@@ -2,6 +2,7 @@
 #include "esp_log.h"
 #include "sim_status_control_at.h"
 #include "sim_network_at.h"
+#include "sim_simcard_at.h"
 
 static const char *TAG = "SIM_AT_TEST";
 
@@ -71,6 +72,10 @@ void app_main(void)
     query_signal_quality(&rssi, &ber);
     ESP_LOGI(TAG, "rssi: %d, ber: %d", rssi, ber);
     
+    sim_simcard_pin_code_t simcard_code;
+    get_simcard_pin_info(&simcard_code);
+    ESP_LOGI(TAG, "SIM Card code: %d", simcard_code);
+
     sim_network_registration_stat_t stat;
     network_registration(&stat);
 

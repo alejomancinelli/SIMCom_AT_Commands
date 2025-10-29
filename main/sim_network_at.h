@@ -14,7 +14,7 @@ extern "C" {
  * [--- List of available commands ---]
  * 
  * [x] AT+CREG          = Network registration
- * [x] AT+COPS          = Operator selection
+ * [ ] AT+COPS          = Operator selection
  * [ ] AT+CUSD          = Unstructured supplementary service data
  * [ ] AT+CSSN          = Supplementary service notifications
  * [ ] AT+CPOL          = Preferred operator list
@@ -49,4 +49,4 @@ sim_at_err_t network_registration(sim_network_registration_stat_t* stat); // TOD
 }
 #endif
 
-#endif /* SIM_NETWORK_AT_*/
+#endif /* SIM_NETWORK_AT_H*/

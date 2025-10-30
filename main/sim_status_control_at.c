@@ -108,3 +108,29 @@ sim_at_err_t reset_module(void)
 
     return SIM_AT_OK; 
 }
+
+sim_at_err_t get_rtc_time(char* rtc_time)
+{
+    sim_at_err_t err = sim_at_cmd_sync("AT+CCLK?\r\n", 2000);
+    if (err != SIM_AT_OK)
+    {   
+        ESP_LOGE(TAG, "Error with AT+CCLK? command: %s", sim_at_err_to_str(err));
+        return err;
+    }
+    
+    // Reads response
+    char resp[SIM_AT_MAX_RESP_LEN];
+    get_sim_at_response(resp);
+    if (strstr(resp, "+CCLK") == NULL)
+        return SIM_AT_ERR_INVALID_ARG; // TODO: Poner otro, o analizar el error después
+    
+    const char *p = strchr(resp, ':');
+    if (!p) return -1; // invalid format
+    while (*p == ':' || *p == ' ' || *p == '\t')
+        p++;
+    // Parse two integers separated by a comma
+    if (sscanf(p, "%s", rtc_time) != 1)
+        return SIM_AT_ERR_INVALID_ARG;
+
+    return SIM_AT_OK;
+}

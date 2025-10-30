@@ -72,7 +72,7 @@ typedef enum {
     SIM_MQTT_ERR_DISCONNECT_FAIL                = 35  // Disconnect from server failed
 } sim_mqtt_err_codes_t;
 
-char* sim_mqtt_err_to_string(sim_mqtt_err_codes_t err);
+const char* sim_mqtt_err_to_string(sim_mqtt_err_codes_t err);
 
 sim_at_err_t start_mqtt_service(void);
 sim_at_err_t stop_mqtt_service(void);

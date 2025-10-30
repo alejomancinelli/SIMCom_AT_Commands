@@ -5,6 +5,7 @@
 #include "sim_simcard_at.h"
 #include "sim_packet_domain_at.h"
 #include "sim_mqtt_at.h"
+#include "sim_internet_services_at.h"
 
 static const char *TAG = "SIM_AT_TEST";
 
@@ -90,6 +91,13 @@ void app_main(void)
     show_pdp_address(&cid, addr);
 
     // ping("www.google.com.ar");
+
+    // NTP
+    get_ntp_config();
+    set_ntp_config("pool.ntp.org", -3);
+    ntp_update_system_time();
+    char current_time[128];
+    get_rtc_time(current_time);
 
     // --- MQTT ---
     start_mqtt_service();

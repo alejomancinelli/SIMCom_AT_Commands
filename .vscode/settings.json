@@ -13,6 +13,7 @@
     "esp_log.h": "c",
     "sim_status_control_at.h": "c",
     "sim_network_at.h": "c",
-    "sim_simcard_at.h": "c"
+    "sim_simcard_at.h": "c",
+    "sim_mqtt_at.h": "c"
   }
 }

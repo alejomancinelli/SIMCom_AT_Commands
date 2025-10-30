@@ -22,7 +22,7 @@ extern "C" {
  * [ ] AT+CACM      = Accumulated call meter
  * [ ] AT+CAMM      = Accumulated call meter maximum
  * [ ] AT+CPUC      = Price per unit and currency table
- * [ ] AT+CCLK      = Real time clock management
+ * [x] AT+CCLK      = Real time clock management
  * [ ] AT+CMEE      = Report mobile equipment error
  * [ ] AT+CPAS      = Phone activity status
  * [ ] AT+SIMEI     = Set IMEI for the module
@@ -48,6 +48,8 @@ void parse_ber(int ber); // TODO: Completar
 
 sim_at_err_t power_down_module(void);
 sim_at_err_t reset_module(void);
+
+sim_at_err_t get_rtc_time(char* rtc_time);
 
 #ifdef __cplusplus
 }

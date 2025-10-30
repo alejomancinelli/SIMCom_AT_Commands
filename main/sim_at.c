@@ -99,6 +99,10 @@ static sim_at_err_t prv_uart_write_cmd(const char *cmd)
 
     int len = strlen(cmd);
 
+    uart_wait_tx_done(g_cfg.uart_port, pdMS_TO_TICKS(100));
+
+    // if (uart_flush(g_cfg.uart_port) != ESP_OK)
+    //     ESP_LOGE(TAG, "Error with uart_flush");
     int written = uart_write_bytes(g_cfg.uart_port, cmd, len);
     if (written != len)
         return SIM_AT_ERR_UART;
@@ -130,6 +134,12 @@ static void s_parser_task_fn(void *arg)
             continue;
         }
 
+        // ESP_LOGI(TAG, "Received message: %s", data);
+        ESP_LOGI(TAG, "Received %d bytes:", len);
+        for (int i = 0; i < len; i++) {
+            printf("%02X ", data[i]);
+        }
+        printf("\n");
         for (int i = 0; i < len; i++)
         {
             char c = (char)data[i];
@@ -163,6 +173,37 @@ static void s_parser_task_fn(void *arg)
                 // xSemaphoreTake(s_resp_mutex, portMAX_DELAY); // TODO: Por el momento no pero no es mala
 
                 // TODO: Esto parte del buffer se podría mejorar un poco seguramente
+                if (s_resp_head < SIM_AT_MAX_LINES)
+                {
+                    // Write normally
+                    strncpy(s_responses[s_resp_head], s_line_buf, SIM_AT_MAX_RESP_LEN - 1);
+                    s_responses[s_resp_head][SIM_AT_MAX_RESP_LEN - 1] = '\0';
+                    s_resp_head = (s_resp_head + 1) % SIM_AT_MAX_LINES;
+                    s_resp_count++; // TODO: Sirve, pero ver bien cómo hacer después con esto
+                }
+                else
+                {
+                    // Buffer full: overwrite oldest
+                    s_resp_head = 0;
+                    strncpy(s_responses[s_resp_head], s_line_buf, SIM_AT_MAX_RESP_LEN - 1);
+                    s_responses[s_resp_head][SIM_AT_MAX_RESP_LEN - 1] = '\0';
+                }
+
+                if (g_debug)
+                    ESP_LOGI(TAG, "<-- %s", s_line_buf);
+
+                // xSemaphoreGive(s_resp_mutex); // TODO: Por el momento no pero no es mala
+                xSemaphoreGive(s_sync_sem); // Notify new response available
+
+                // Reset line buffer
+                s_line_pos = 0;
+                s_line_buf[0] = '\0';
+            }
+
+            // TODO: Para completar en lo que es MQTT, que la repsuesta es "\r \n >"
+            // Ver cómo hacerlo un poquito mejor 
+            if (c == '>')
+            {
                 if (s_resp_head < SIM_AT_MAX_LINES)
                 {
                     // Write normally

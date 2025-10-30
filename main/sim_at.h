@@ -239,12 +239,6 @@ typedef struct {
     uint32_t keepalive_s;
 } sim_mqtt_cfg_t;
 
-sim_at_err_t mqtt_init(const sim_mqtt_cfg_t *cfg);
-sim_at_err_t mqtt_connect(uint32_t timeout_ms);
-sim_at_err_t mqtt_disconnect(void);
-sim_at_err_t mqtt_publish(const char *topic, const uint8_t *payload, size_t payload_len, uint8_t qos, bool retain, uint32_t timeout_ms);
-sim_at_err_t mqtt_subscribe(const char *topic, uint8_t qos, void (*msg_cb)(const char *topic, const uint8_t *payload, size_t payload_len, void *ctx), void *ctx);
-
 /**
  * -----------------------
  * Diagnostics / debug

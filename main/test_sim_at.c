@@ -38,7 +38,7 @@ void app_main(void)
 
     sim_at_err_t err;
     
-    vTaskDelay(pdMS_TO_TICKS(2000));
+    vTaskDelay(pdMS_TO_TICKS(5000));
     
     /* --- 1. Send basic AT --- */
     char resp[SIM_AT_MAX_RESP_LEN];
@@ -52,16 +52,6 @@ void app_main(void)
         // else
         //     ESP_LOGE(TAG, "SYNC FAILED: %d", err);
     }
-
-    // /* --- 2. Try async command --- */
-    // ESP_LOGI(TAG, "Sending 'ATI' asynchronously...");
-    // err = sim_at_cmd_async("ATI\r\n", async_cb, NULL, 3000);
-    // if (err != SIM_AT_OK)
-    //     ESP_LOGE(TAG, "ASYNC send failed: %d", err);
-
-    // vTaskDelay(pdMS_TO_TICKS(4000));  // allow async cb to print
-
-    // /* --- 3. Send shutdown command --- */
     
     sim_status_control_fun_t phone_functionality;
     err = get_phone_functionality(&phone_functionality);
@@ -70,10 +60,14 @@ void app_main(void)
     if (phone_functionality == FULL_FUNCTIONALITY)
         ESP_LOGI(TAG, "Phone with full functionality!");
     
-    int rssi = 0, ber = 0; 
-    query_signal_quality(&rssi, &ber);
-    ESP_LOGI(TAG, "rssi: %d, ber: %d", rssi, ber);
-    
+    int rssi = 99, ber = 99; 
+    while (rssi == 99)
+    {
+        query_signal_quality(&rssi, &ber);
+        ESP_LOGW(TAG, "No signal! Rssi: %d. Waiting connection...", rssi);
+        vTaskDelay(pdMS_TO_TICKS(2000));
+    }
+
     sim_simcard_pin_code_t simcard_code;
     get_simcard_pin_info(&simcard_code);
     ESP_LOGI(TAG, "SIM Card code: %d", simcard_code);
@@ -95,7 +89,20 @@ void app_main(void)
     char addr[32];
     show_pdp_address(&cid, addr);
 
-    ping("www.google.com.ar");
+    // ping("www.google.com.ar");
+
+    // --- MQTT ---
+    start_mqtt_service();
+    acquire_mqtt_client(0, "Bemakoha4G");
+    connect_mqtt_server(0, "tcp://app.bemakoha.com:1883", 20, 1);
+    vTaskDelay(pdMS_TO_TICKS(5000));
+    mqtt_topic(0, "4gTest");
+    mqtt_payload(0, "Hola!");
+    mqtt_publish(0, 0, 60);
+    vTaskDelay(pdMS_TO_TICKS(5000));
+    disconnect_mqtt_server(0, 60);
+    release_mqtt_client(0);
+    stop_mqtt_service();
 
     ESP_LOGI(TAG, "Shutting down SIMCom module");
     // power_down_module();

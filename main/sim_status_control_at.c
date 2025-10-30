@@ -132,5 +132,8 @@ sim_at_err_t get_rtc_time(char* rtc_time)
     if (sscanf(p, "%s", rtc_time) != 1)
         return SIM_AT_ERR_INVALID_ARG;
 
+    // Ignore OK
+    ignore_sim_response();
+
     return SIM_AT_OK;
 }

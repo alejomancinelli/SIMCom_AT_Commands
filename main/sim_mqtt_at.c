@@ -153,7 +153,7 @@ sim_at_err_t connect_mqtt_server(int client_index, char* server_addr, int keepal
     if (strstr(resp, "OK") == NULL)
         return SIM_AT_ERR_INVALID_ARG; // TODO: Poner otro, o analizar el error después
 
-        // Ignore rest of the response
+    // Ignore rest of the response
     ignore_sim_response();
 
     // TODO: Faltaría analizar bien la respuesta

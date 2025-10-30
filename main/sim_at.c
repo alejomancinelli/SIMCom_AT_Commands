@@ -48,50 +48,99 @@ const char *sim_at_err_to_str(sim_at_err_t err)
     ESP_LOGI(TAG, "%d", err);
     switch (err)
     {
-    // TODO: No usa todos ni ahí, al pedo capaz tantos
-    case SIM_AT_OK:
-        return "SIM_AT_OK";
-    case SIM_AT_ERR_INVALID_ARG:
-        return "SIM_AT_ERR_INVALID_ARG";
-    case SIM_AT_ERR_NO_MEM:
-        return "SIM_AT_ERR_NO_MEM";
-    case SIM_AT_ERR_TIMEOUT:
-        return "SIM_AT_ERR_TIMEOUT";
-    case SIM_AT_ERR_UART:
-        return "SIM_AT_ERR_UART";
-    case SIM_AT_ERR_BUSY:
-        return "SIM_AT_ERR_BUSY";
-    case SIM_AT_ERR_INTERNAL:
-        return "SIM_AT_ERR_INTERNAL";
-    case SIM_AT_ERR_NOT_INIT:
-        return "SIM_AT_ERR_NOT_INIT";
-    case SIM_AT_ERR_OVERFLOW:
-        return "SIM_AT_ERR_OVERFLOW";
-    case SIM_AT_ERR_ABORTED:
-        return "SIM_AT_ERR_ABORTED";
-    default:
-        return "INVALID ERR";
+    case SIM_AT_OK:                 return "SIM_AT_OK";
+    case SIM_AT_ERR_INVALID_ARG:    return "SIM_AT_ERR_INVALID_ARG";
+    case SIM_AT_ERR_NO_MEM:         return "SIM_AT_ERR_NO_MEM";
+    case SIM_AT_ERR_TIMEOUT:        return "SIM_AT_ERR_TIMEOUT";
+    case SIM_AT_ERR_UART:           return "SIM_AT_ERR_UART";
+    case SIM_AT_ERR_BUSY:           return "SIM_AT_ERR_BUSY";
+    case SIM_AT_ERR_INTERNAL:       return "SIM_AT_ERR_INTERNAL";
+    case SIM_AT_ERR_NOT_INIT:       return "SIM_AT_ERR_NOT_INIT";
+    case SIM_AT_ERR_OVERFLOW:       return "SIM_AT_ERR_OVERFLOW";
+    case SIM_AT_ERR_ABORTED:        return "SIM_AT_ERR_ABORTED";
+    default:                        return "INVALID ERR";
     }
+
     return "INVALID ERR";
 }
 
-// TODO: Falta analizar los casos en que el módulo envía respuestas a eventos que no fueron requeridos,
-// como SMSs o qsy
-// I (3278) sim_at: <-- QCRDY
-// I (3498) sim_at: <-- +CPIN: NOT INSERTED
-void get_sim_at_response(char *buf)
+/**
+ * @brief Prints raw bytes in HEX format
+ * 
+ * @param data String of bytes to print
+ * @param len Lenght of the string
+ */
+static void print_bytes(uint8_t* data, int len)
 {
-    strncpy(buf, s_responses[s_resp_tail++], SIM_AT_MAX_RESP_LEN - 1);
-    if (s_resp_tail >= SIM_AT_MAX_LINES) s_resp_tail = 0;
+    ESP_LOGI(TAG, "Received %d bytes:", len);
+    for (int i = 0; i < len; i++) {
+        printf("%02X ", data[i]);
+    }
+    printf("\n");
 }
 
-void ignore_sim_response(void)
+/**
+ * @brief Print sent command string
+ * 
+ * @param cmd Command string
+ * @param len String lenght
+ */
+static void print_sent_command(const char* cmd, int len)
 {
-    s_resp_tail++;
-    if (s_resp_tail >= SIM_AT_MAX_LINES) s_resp_tail = 0;
+    char clean_cmd[SIM_AT_MAX_CMD_LEN]; // use a safe upper bound constant
+    strncpy(clean_cmd, cmd, sizeof(clean_cmd) - 1);
+    clean_cmd[len - 2] = '\0'; // ensure null termination
+
+    ESP_LOGI(TAG, "--> %s", clean_cmd);
 }
 
-/* write raw command to UART (blocking) */
+/**
+ * @brief Add UART response to ring buffer
+ * 
+ * @param data Response string
+ */
+static void add_response_to_buffer(const char* data)
+{
+    if (s_resp_head < SIM_AT_MAX_LINES)
+    {
+        // Write normally
+        strncpy(s_responses[s_resp_head], data, SIM_AT_MAX_RESP_LEN - 1);
+        s_responses[s_resp_head][SIM_AT_MAX_RESP_LEN - 1] = '\0';
+        s_resp_head = (s_resp_head + 1) % SIM_AT_MAX_LINES;
+        s_resp_count++;
+    }
+    else
+    {
+        // Buffer full: overwrite oldest
+        s_resp_head = 0;
+        strncpy(s_responses[s_resp_head], data, SIM_AT_MAX_RESP_LEN - 1);
+        s_responses[s_resp_head][SIM_AT_MAX_RESP_LEN - 1] = '\0';
+    }
+
+    if (g_debug)
+        ESP_LOGI(TAG, "<-- %s", data); 
+}
+
+/**
+ * @brief Resets response line buffer
+ */
+static void reset_line_buffer(void)
+{
+    s_line_pos = 0;
+    s_line_buf[0] = '\0';
+}
+
+/**
+ * @brief Write raw command to UART (blocking) 
+ * 
+ * @param cmd NUL-Terminated AT Command (e.g. "AT+CGSN\r\n"). Must be <= SIM_AT_MAX_CMD_LEN.
+ * 
+ * @returns
+ *  - SIM_AT_OK on success
+ *  - SIM_AT_ERR_NOT_INIT is module not initialized
+ *  - SIM_AT_ERR_UART if there is a UART error
+ *  
+ */ 
 static sim_at_err_t prv_uart_write_cmd(const char *cmd)
 {
     if (!g_inited)
@@ -100,21 +149,12 @@ static sim_at_err_t prv_uart_write_cmd(const char *cmd)
     int len = strlen(cmd);
 
     uart_wait_tx_done(g_cfg.uart_port, pdMS_TO_TICKS(100));
-
-    // if (uart_flush(g_cfg.uart_port) != ESP_OK)
-    //     ESP_LOGE(TAG, "Error with uart_flush");
     int written = uart_write_bytes(g_cfg.uart_port, cmd, len);
+    
     if (written != len)
         return SIM_AT_ERR_UART;
 
-    if (g_debug)
-    {
-        char clean_cmd[SIM_AT_MAX_CMD_LEN]; // use a safe upper bound constant
-        strncpy(clean_cmd, cmd, sizeof(clean_cmd) - 1);
-        clean_cmd[len - 2] = '\0'; // ensure null termination
-
-        ESP_LOGI(TAG, "--> %s", clean_cmd);
-    }
+    if (g_debug) print_sent_command(cmd, len);
 
     return SIM_AT_OK;
 }
@@ -122,7 +162,7 @@ static sim_at_err_t prv_uart_write_cmd(const char *cmd)
 /* Parser task: reads bytes from UART, assembles lines, routes them */
 static void s_parser_task_fn(void *arg)
 {
-    const TickType_t rx_wait = pdMS_TO_TICKS(50);
+    const TickType_t rx_wait = pdMS_TO_TICKS(UART_MAX_WAITTIME);
     uint8_t *data = (uint8_t *)malloc(SIM_AT_MAX_RESP_LEN + 1);
 
     while (1)
@@ -134,12 +174,10 @@ static void s_parser_task_fn(void *arg)
             continue;
         }
 
-        // ESP_LOGI(TAG, "Received message: %s", data);
-        ESP_LOGI(TAG, "Received %d bytes:", len);
-        for (int i = 0; i < len; i++) {
-            printf("%02X ", data[i]);
-        }
-        printf("\n");
+        // Print received bytes
+        if (g_debug) print_bytes(data, len);
+
+        // Form responses
         for (int i = 0; i < len; i++)
         {
             char c = (char)data[i];
@@ -161,78 +199,36 @@ static void s_parser_task_fn(void *arg)
                     s_line_buf[--s_line_pos] = '\0';
                 }
 
+                // Check for empty responses
                 if (s_line_pos <= 0)
                 {
-                    // Reset line buffer
-                    s_line_pos = 0;
-                    s_line_buf[0] = '\0';
+                    reset_line_buffer();
                     continue;
                 }
 
                 // Write to circular buffer
                 // xSemaphoreTake(s_resp_mutex, portMAX_DELAY); // TODO: Por el momento no pero no es mala
 
-                // TODO: Esto parte del buffer se podría mejorar un poco seguramente
-                if (s_resp_head < SIM_AT_MAX_LINES)
-                {
-                    // Write normally
-                    strncpy(s_responses[s_resp_head], s_line_buf, SIM_AT_MAX_RESP_LEN - 1);
-                    s_responses[s_resp_head][SIM_AT_MAX_RESP_LEN - 1] = '\0';
-                    s_resp_head = (s_resp_head + 1) % SIM_AT_MAX_LINES;
-                    s_resp_count++; // TODO: Sirve, pero ver bien cómo hacer después con esto
-                }
-                else
-                {
-                    // Buffer full: overwrite oldest
-                    s_resp_head = 0;
-                    strncpy(s_responses[s_resp_head], s_line_buf, SIM_AT_MAX_RESP_LEN - 1);
-                    s_responses[s_resp_head][SIM_AT_MAX_RESP_LEN - 1] = '\0';
-                }
-
-                if (g_debug)
-                    ESP_LOGI(TAG, "<-- %s", s_line_buf);
+                add_response_to_buffer(s_line_buf);
 
                 // xSemaphoreGive(s_resp_mutex); // TODO: Por el momento no pero no es mala
                 xSemaphoreGive(s_sync_sem); // Notify new response available
 
-                // Reset line buffer
-                s_line_pos = 0;
-                s_line_buf[0] = '\0';
+                reset_line_buffer();
             }
-
-            // TODO: Para completar en lo que es MQTT, que la repsuesta es "\r \n >"
-            // Ver cómo hacerlo un poquito mejor 
+            // Sometimes it responds with '>' to complete with additional data
             if (c == '>')
             {
-                if (s_resp_head < SIM_AT_MAX_LINES)
-                {
-                    // Write normally
-                    strncpy(s_responses[s_resp_head], s_line_buf, SIM_AT_MAX_RESP_LEN - 1);
-                    s_responses[s_resp_head][SIM_AT_MAX_RESP_LEN - 1] = '\0';
-                    s_resp_head = (s_resp_head + 1) % SIM_AT_MAX_LINES;
-                    s_resp_count++; // TODO: Sirve, pero ver bien cómo hacer después con esto
-                }
-                else
-                {
-                    // Buffer full: overwrite oldest
-                    s_resp_head = 0;
-                    strncpy(s_responses[s_resp_head], s_line_buf, SIM_AT_MAX_RESP_LEN - 1);
-                    s_responses[s_resp_head][SIM_AT_MAX_RESP_LEN - 1] = '\0';
-                }
-
-                if (g_debug)
-                    ESP_LOGI(TAG, "<-- %s", s_line_buf);
-
+                add_response_to_buffer(s_line_buf);
+                
                 // xSemaphoreGive(s_resp_mutex); // TODO: Por el momento no pero no es mala
                 xSemaphoreGive(s_sync_sem); // Notify new response available
 
-                // Reset line buffer
-                s_line_pos = 0;
-                s_line_buf[0] = '\0';
+                reset_line_buffer();
             }
         }
     }
-    // free(data);
+    free(data);
 }
 
 /* Public API implementations */
@@ -242,7 +238,7 @@ sim_at_err_t sim_at_init(const sim_at_config_t *cfg)
     if (!cfg)
         return SIM_AT_ERR_INVALID_ARG;
     if (g_inited)
-        return SIM_AT_OK; /* idempotent */
+        return SIM_AT_ERR_ABORTED;
 
     /* copy config */
     memcpy(&g_cfg, cfg, sizeof(g_cfg));
@@ -252,7 +248,7 @@ sim_at_err_t sim_at_init(const sim_at_config_t *cfg)
     if (!s_sync_sem)
         return SIM_AT_ERR_NO_MEM;
 
-    /* uart config: user provides uart_conf; we just install driver */
+    /* uart config */
     esp_err_t e;
     e = uart_driver_install(g_cfg.uart_port, SIM_AT_MAX_RESP_LEN * 2, 0, 0, NULL, 0);
     if (e != ESP_OK)
@@ -276,6 +272,7 @@ sim_at_err_t sim_at_init(const sim_at_config_t *cfg)
     }
     ESP_LOGI(TAG, "UART port %d initialized on TX=%d, RX=%d", g_cfg.uart_port, g_cfg.tx_pin, g_cfg.rx_pin);
 
+    // TODO: Controlar bien esto y hacerlo funcionar
     // /* configure control pins as outputs if set */
     // if (g_cfg.control_pins.dtr_pin >= 0) {
     //     gpio_set_direction(g_cfg.control_pins.dtr_pin, GPIO_MODE_OUTPUT);
@@ -303,6 +300,8 @@ sim_at_err_t sim_at_init(const sim_at_config_t *cfg)
 
     g_inited = true;
 
+    // TODO: Ver de mejorar esto? Capaz tendría que ir aparte
+    // Además faltaría checkear que se haya podido sincronizar correctamente
     /* disable echo by default to simplify parsing (try but tolerate failure) */
     char resp[SIM_AT_MAX_RESP_LEN];
     sim_at_cmd_sync("AT\r\n", 2000);
@@ -317,26 +316,31 @@ sim_at_err_t sim_at_init(const sim_at_config_t *cfg)
 sim_at_err_t sim_at_deinit(void)
 {
     if (!g_inited)
-        return SIM_AT_OK;
+        return SIM_AT_ERR_NOT_INIT;
+    
     /* stop parser task */
     if (s_parser_task)
     {
         vTaskDelete(s_parser_task);
         s_parser_task = NULL;
     }
+
     /* delete uart driver */
     uart_driver_delete(g_cfg.uart_port);
+    
     /* delete semaphores */
     if (s_sync_sem)
     {
         vSemaphoreDelete(s_sync_sem);
         s_sync_sem = NULL;
     }
+    
     g_inited = false;
     ESP_LOGI(TAG, "sim_at deinitialized");
     return SIM_AT_OK;
 }
 
+// TODO: No se si sirve
 // sim_at_err_t sim_at_cmd_async(const char *cmd, sim_at_cmd_cb_t cb, void *user_ctx, uint32_t timeout_ms) {
 //     if (!g_inited) return SIM_AT_ERR_NOT_INIT;
 //     if (!cmd) return SIM_AT_ERR_INVALID_ARG;
@@ -367,6 +371,11 @@ sim_at_err_t sim_at_cmd_sync(const char *cmd, uint32_t timeout_ms)
     if (strlen(cmd) >= SIM_AT_MAX_CMD_LEN)
         return SIM_AT_ERR_INVALID_ARG;
 
+    // Clears previous response count
+    // TODO: Ver bien cómo hacer esto
+    s_resp_count = 0;
+    s_resp_tail = s_resp_head;
+    
     sim_at_err_t r = prv_uart_write_cmd(cmd);
     if (r != SIM_AT_OK)
     {
@@ -384,6 +393,7 @@ sim_at_err_t sim_at_cmd_sync(const char *cmd, uint32_t timeout_ms)
     return SIM_AT_OK;
 }
 
+// TODO: No sé si sirve
 sim_at_err_t sim_at_cmd_sync_ignore_response(const char *cmd, uint32_t timeout_ms, uint8_t num_responses)
 {
     if (!g_inited)
@@ -411,6 +421,7 @@ sim_at_err_t sim_at_cmd_sync_ignore_response(const char *cmd, uint32_t timeout_m
     return SIM_AT_OK;
 }
 
+// TODO: No sé si sirve
 sim_at_err_t sim_at_uart_flush_rx(void)
 {
     if (!g_inited)
@@ -419,34 +430,62 @@ sim_at_err_t sim_at_uart_flush_rx(void)
     return SIM_AT_OK;
 }
 
-sim_at_err_t sim_at_control_dtr(bool state)
+// TODO: Falta hacer y probar todas estas
+// sim_at_err_t sim_at_control_dtr(bool state)
+// {
+//     if (!g_inited)
+//         return SIM_AT_ERR_NOT_INIT;
+//     if (g_cfg.control_pins.dtr_pin < 0)
+//         return SIM_AT_ERR_INVALID_ARG;
+//     gpio_set_level(g_cfg.control_pins.dtr_pin, state ? 1 : 0);
+//     return SIM_AT_OK;
+// }
+
+// sim_at_err_t sim_at_control_pwrkey(bool state)
+// {
+//     if (!g_inited)
+//         return SIM_AT_ERR_NOT_INIT;
+//     if (g_cfg.control_pins.pwrkey_pin < 0)
+//         return SIM_AT_ERR_INVALID_ARG;
+//     gpio_set_level(g_cfg.control_pins.pwrkey_pin, state ? 1 : 0);
+//     return SIM_AT_OK;
+// }
+
+// sim_at_err_t sim_at_control_reset(bool state)
+// {
+//     if (!g_inited)
+//         return SIM_AT_ERR_NOT_INIT;
+//     if (g_cfg.control_pins.rst_pin < 0)
+//         return SIM_AT_ERR_INVALID_ARG;
+//     gpio_set_level(g_cfg.control_pins.rst_pin, state ? 1 : 0);
+//     return SIM_AT_OK;
+// }
+
+// TODO: Falta analizar los casos en que el módulo envía respuestas a eventos que no fueron requeridos,
+// como SMSs o qsy
+// I (3278) sim_at: <-- QCRDY
+// I (3498) sim_at: <-- +CPIN: NOT INSERTED
+bool get_sim_at_response(char *buf)
 {
-    if (!g_inited)
-        return SIM_AT_ERR_NOT_INIT;
-    if (g_cfg.control_pins.dtr_pin < 0)
-        return SIM_AT_ERR_INVALID_ARG;
-    gpio_set_level(g_cfg.control_pins.dtr_pin, state ? 1 : 0);
-    return SIM_AT_OK;
+    if (s_resp_count == 0)
+        return false; // no new responses
+
+    strncpy(buf, s_responses[s_resp_tail], SIM_AT_MAX_RESP_LEN - 1);
+    buf[SIM_AT_MAX_RESP_LEN - 1] = '\0'; // ensure null-terminated
+
+    s_resp_tail = (s_resp_tail + 1) % SIM_AT_MAX_LINES;
+    s_resp_count--; // maintain count
+    
+    return true;
 }
 
-sim_at_err_t sim_at_control_pwrkey(bool state)
+void ignore_sim_response(void)
 {
-    if (!g_inited)
-        return SIM_AT_ERR_NOT_INIT;
-    if (g_cfg.control_pins.pwrkey_pin < 0)
-        return SIM_AT_ERR_INVALID_ARG;
-    gpio_set_level(g_cfg.control_pins.pwrkey_pin, state ? 1 : 0);
-    return SIM_AT_OK;
-}
+    if (s_resp_count == 0)
+    return; // nothing to ignore
 
-sim_at_err_t sim_at_control_reset(bool state)
-{
-    if (!g_inited)
-        return SIM_AT_ERR_NOT_INIT;
-    if (g_cfg.control_pins.rst_pin < 0)
-        return SIM_AT_ERR_INVALID_ARG;
-    gpio_set_level(g_cfg.control_pins.rst_pin, state ? 1 : 0);
-    return SIM_AT_OK;
+    s_resp_tail = (s_resp_tail + 1) % SIM_AT_MAX_LINES;
+    s_resp_count--;
 }
 
 sim_at_err_t sim_at_enable_debug(bool en)
@@ -455,7 +494,5 @@ sim_at_err_t sim_at_enable_debug(bool en)
     ESP_LOGI(TAG, "Debug %s", en ? "enable" : "disable");
     return SIM_AT_OK;
 }
-
-/* placeholders remain declared in header for higher-level modules */
 
 /* End of file */

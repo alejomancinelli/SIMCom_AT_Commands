@@ -6,6 +6,7 @@
 #include "sim_packet_domain_at.h"
 #include "sim_mqtt_at.h"
 #include "sim_internet_services_at.h"
+#include "driver/gpio.h"
 
 static const char *TAG = "SIM_AT_TEST";
 
@@ -13,8 +14,8 @@ void app_main(void)
 {
     sim_at_config_t cfg = {
         .uart_port = UART_NUM_1,
-        .tx_pin = 18,
-        .rx_pin = 17,
+        .tx_pin = GPIO_NUM_18,
+        .rx_pin = GPIO_NUM_17,
         .rts_pin = -1,
         .cts_pin = -1,
         .use_hw_flow_control = false,

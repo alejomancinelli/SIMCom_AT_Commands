@@ -1,40 +1,53 @@
 #include "sim_status_control_at.h"
 
-// TODO: Tira problemas por repetir el nombre?
 static const char *TAG = "status_control_at";
 
-sim_at_err_t get_phone_functionality(sim_status_control_fun_t* fun)
-{
-    char resp[SIM_AT_MAX_RESP_LEN];
-    sim_at_err_t err = sim_at_cmd_sync("AT+CFUN?\r\n", 2000);
+sim_at_err_t sim_at_get_phone_functionality(sim_status_control_fun_t* fun)
+{   
+    // Send command
+    sim_at_err_t err = sim_at_cmd_sync("AT+CFUN?\r\n", 9000);
     if (err != SIM_AT_OK)
     {   
-        ESP_LOGE(TAG, "Error with AT+CFUN? commands: %s", sim_at_err_to_str(err));
+        ESP_LOGE(TAG, "Error sending AT+CFUN? command: %s", sim_at_err_to_str(err));
         return err;
     }
-
-    // Reads response
-    get_sim_at_response(resp);
-    if (strstr(resp, "+CFUN") == NULL)
-        return SIM_AT_ERR_INVALID_ARG; // TODO: Poner otro, o analizar el error después
     
-    const char *p = strchr(resp, ':');
-    if (!p) return -1; // invalid format
-    while (*p == ':' || *p == ' ' || *p == '\t')
-    p++;
-    *fun = atoi(p);
+    // Reads response
+    char resp[SIM_AT_MAX_RESP_LEN];
+    char *data;
+    sim_at_responses_err_t resp_err = sim_at_read_response_values(resp, "+CFUN", &data);
+    if (resp_err != SIM_AT_RESPONSE_OK)
+    {
+        ESP_LOGE(TAG, "Error with AT+CFUN? response: %s", sim_at_response_err_to_str(resp_err));
+        *fun = FUN_ERROR;
+        return SIM_AT_ERR_RESPONSE;
+    }
+    
+    // Get FUN status code
+    *fun = atoi(data);
     
     // Ignores OK
-    ignore_sim_response();    
-    
+    resp_err = sim_at_read_ok(resp);
+    if (resp_err != SIM_AT_RESPONSE_COMMAND_OK)
+    {
+        ESP_LOGE(TAG, "Ok response was not received: %s", sim_at_response_err_to_str(resp_err));
+        return SIM_AT_ERR_RESPONSE;
+    }
+
     return SIM_AT_OK;
 }
 
-sim_at_err_t set_phone_functionality(sim_status_control_fun_t fun)
+sim_at_err_t sim_at_set_phone_functionality(sim_status_control_fun_t fun)
 {
+    // <rst> is always 1:
+    // Reset the ME before setting it to <fun> power level. This value only takes effect when <fun> equals 1.
+    
+    // Command
     char cmd[SIM_AT_MAX_CMD_LEN];
-    snprintf(cmd, SIM_AT_MAX_CMD_LEN, "AT+CFUN=%d,1\r\n", fun);
-    sim_at_err_t err = sim_at_cmd_sync(cmd, 2000);
+    snprintf(cmd, SIM_AT_MAX_CMD_LEN, "AT+CFUN=%d,1\r\n", fun); 
+    
+    // Send command
+    sim_at_err_t err = sim_at_cmd_sync(cmd, 9000);
     if (err != SIM_AT_OK)
     {   
         ESP_LOGE(TAG, "Error with AT+CFUN=%d,1 commands: %s", fun, sim_at_err_to_str(err));
@@ -43,16 +56,20 @@ sim_at_err_t set_phone_functionality(sim_status_control_fun_t fun)
     
     // Reads response
     char resp[SIM_AT_MAX_RESP_LEN];
-    get_sim_at_response(resp);
-    if (strstr(resp, "OK") == NULL)
-        return SIM_AT_ERR_INVALID_ARG; // TODO: Poner otro, o analizar el error después
+    sim_at_responses_err_t resp_err = sim_at_read_ok(resp);
+    if (resp_err != SIM_AT_RESPONSE_COMMAND_OK)
+    {
+        ESP_LOGE(TAG, "Ok response was not received: %s", sim_at_response_err_to_str(resp_err));
+        return SIM_AT_ERR_RESPONSE;
+    }
     
     return SIM_AT_OK;
 }
 
-sim_at_err_t query_signal_quality(int* rssi, int* ber)
+sim_at_err_t sim_at_query_signal_quality(int* rssi, int* ber)
 {
-    sim_at_err_t err = sim_at_cmd_sync("AT+CSQ\r\n", 2000);
+    // Send command
+    sim_at_err_t err = sim_at_cmd_sync("AT+CSQ\r\n", 9000);
     if (err != SIM_AT_OK)
     {   
         ESP_LOGE(TAG, "Error with AT+CSQ commands: %s", sim_at_err_to_str(err));
@@ -61,57 +78,77 @@ sim_at_err_t query_signal_quality(int* rssi, int* ber)
     
     // Reads response
     char resp[SIM_AT_MAX_RESP_LEN];
-    get_sim_at_response(resp);
-    if (strstr(resp, "+CSQ") == NULL)
-        return SIM_AT_ERR_INVALID_ARG; // TODO: Poner otro, o analizar el error después
+    char *data;
+    sim_at_responses_err_t resp_err = sim_at_read_response_values(resp, "+CSQ", &data);
+    if (resp_err != SIM_AT_RESPONSE_OK)
+    {
+        ESP_LOGE(TAG, "Error with AT+CSQ response: %s", sim_at_response_err_to_str(resp_err));
+        return SIM_AT_ERR_RESPONSE;
+    }
     
-    const char *p = strchr(resp, ':');
-    if (!p) return -1; // invalid format
-    while (*p == ':' || *p == ' ' || *p == '\t')
-        p++;
     // Parse two integers separated by a comma
-    if (sscanf(p, "%d,%d", rssi, ber) != 2)
-        return SIM_AT_ERR_INVALID_ARG;
+    if (sscanf(data, "%d,%d", rssi, ber) != 2)
+        return SIM_AT_ERR_RESPONSE;
 
-    // Ignore OK
-    ignore_sim_response();
+    // Read OK responss
+    resp_err = sim_at_read_ok(resp);
+    if (resp_err != SIM_AT_RESPONSE_COMMAND_OK)
+    {
+        ESP_LOGE(TAG, "Ok response was not received: %s", sim_at_response_err_to_str(resp_err));
+        return SIM_AT_ERR_RESPONSE;
+    }
 
     return SIM_AT_OK; 
 }
 
-sim_at_err_t power_down_module(void)
+sim_at_err_t sim_at_power_down_module(void)
 {
-    sim_at_err_t err = sim_at_cmd_sync("AT+CPOF\r\n", 2000);
+    // Send command
+    sim_at_err_t err = sim_at_cmd_sync("AT+CPOF\r\n", 9000);
     if (err != SIM_AT_OK)
     {   
         ESP_LOGE(TAG, "Error with AT+CPOF command: %s", sim_at_err_to_str(err));
         return err;
     }
     
-    // Ignore OK
-    ignore_sim_response();
+    // Read OK responss
+    char resp[SIM_AT_MAX_RESP_LEN];
+    sim_at_responses_err_t resp_err = sim_at_read_ok(resp);
+    if (resp_err != SIM_AT_RESPONSE_COMMAND_OK)
+    {
+        ESP_LOGE(TAG, "Ok response was not received: %s", sim_at_response_err_to_str(resp_err));
+        return SIM_AT_ERR_RESPONSE;
+    }
 
     return SIM_AT_OK; 
 }
 
-sim_at_err_t reset_module(void)
+sim_at_err_t sim_at_reset_module(void)
 {
-    sim_at_err_t err = sim_at_cmd_sync("AT+CRESET\r\n", 2000);
+    // Send command
+    sim_at_err_t err = sim_at_cmd_sync("AT+CRESET\r\n", 9000);
     if (err != SIM_AT_OK)
     {   
         ESP_LOGE(TAG, "Error with AT+CRESET command: %s", sim_at_err_to_str(err));
         return err;
     }
     
-    // Ignore OK
-    ignore_sim_response();
+    // Read OK responss
+    char resp[SIM_AT_MAX_RESP_LEN];
+    sim_at_responses_err_t resp_err = sim_at_read_ok(resp);
+    if (resp_err != SIM_AT_RESPONSE_COMMAND_OK)
+    {
+        ESP_LOGE(TAG, "Ok response was not received: %s", sim_at_response_err_to_str(resp_err));
+        return SIM_AT_ERR_RESPONSE;
+    }
 
     return SIM_AT_OK; 
 }
 
-sim_at_err_t get_rtc_time(char* rtc_time)
+sim_at_err_t sim_at_get_rtc_time(char* rtc_time)
 {
-    sim_at_err_t err = sim_at_cmd_sync("AT+CCLK?\r\n", 2000);
+    // Send command
+    sim_at_err_t err = sim_at_cmd_sync("AT+CCLK?\r\n", 9000);
     if (err != SIM_AT_OK)
     {   
         ESP_LOGE(TAG, "Error with AT+CCLK? command: %s", sim_at_err_to_str(err));
@@ -120,20 +157,25 @@ sim_at_err_t get_rtc_time(char* rtc_time)
     
     // Reads response
     char resp[SIM_AT_MAX_RESP_LEN];
-    get_sim_at_response(resp);
-    if (strstr(resp, "+CCLK") == NULL)
-        return SIM_AT_ERR_INVALID_ARG; // TODO: Poner otro, o analizar el error después
+    char *data;
+    sim_at_responses_err_t resp_err = sim_at_read_response_values(resp, "+CCLK", &data);
+    if (resp_err != SIM_AT_RESPONSE_OK)
+    {
+        ESP_LOGE(TAG, "Error with AT+CSQ response: %s", sim_at_response_err_to_str(resp_err));
+        return SIM_AT_ERR_RESPONSE;
+    }
     
-    const char *p = strchr(resp, ':');
-    if (!p) return -1; // invalid format
-    while (*p == ':' || *p == ' ' || *p == '\t')
-        p++;
-    // Parse two integers separated by a comma
-    if (sscanf(p, "%s", rtc_time) != 1)
-        return SIM_AT_ERR_INVALID_ARG;
+    // Parse response
+    if (sscanf(data, "%s", rtc_time) != 1)
+        return SIM_AT_ERR_RESPONSE;
 
-    // Ignore OK
-    ignore_sim_response();
+    // Read OK response
+    resp_err = sim_at_read_ok(resp);
+    if (resp_err != SIM_AT_RESPONSE_COMMAND_OK)
+    {
+        ESP_LOGE(TAG, "Ok response was not received: %s", sim_at_response_err_to_str(resp_err));
+        return SIM_AT_ERR_RESPONSE;
+    }
 
     return SIM_AT_OK;
 }

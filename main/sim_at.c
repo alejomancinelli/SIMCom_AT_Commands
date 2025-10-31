@@ -45,7 +45,6 @@ static SemaphoreHandle_t s_sync_sem = NULL;
 
 const char *sim_at_err_to_str(sim_at_err_t err)
 {
-    ESP_LOGI(TAG, "%d", err);
     switch (err)
     {
     case SIM_AT_OK:                 return "SIM_AT_OK";
@@ -59,6 +58,21 @@ const char *sim_at_err_to_str(sim_at_err_t err)
     case SIM_AT_ERR_OVERFLOW:       return "SIM_AT_ERR_OVERFLOW";
     case SIM_AT_ERR_ABORTED:        return "SIM_AT_ERR_ABORTED";
     default:                        return "INVALID ERR";
+    }
+
+    return "INVALID ERR";
+}
+
+const char* sim_at_response_err_to_str(sim_at_responses_err_t err)
+{
+    switch (err)
+    {
+    case SIM_AT_RESPONSE_OK:                    return "SIM_AT_RESPONSE_OK";
+    case SIM_AT_RESPONSE_COMMAND_OK:            return "SIM_AT_RESPONSE_COMMAND_OK";
+    case SIM_AT_RESPONSE_ERR_INVALID_FORMAT:    return "SIM_AT_RESPONSE_ERR_INVALID_FORMAT";
+    case SIM_AT_RESPONSE_ERR_COMMAND_ERROR:     return "SIM_AT_RESPONSE_ERR_COMMAND_ERROR";
+    case SIM_AT_RESPONSE_ERR_COMMAND_INVALID:   return "SIM_AT_RESPONSE_ERR_COMMAND_INVALID";
+    default:                                    return "INVALID ERR";
     }
 
     return "INVALID ERR";
@@ -494,5 +508,42 @@ sim_at_err_t sim_at_enable_debug(bool en)
     ESP_LOGI(TAG, "Debug %s", en ? "enable" : "disable");
     return SIM_AT_OK;
 }
+
+sim_at_responses_err_t sim_at_read_response_values(char* resp, const char* key_word, char** index)
+{
+    // Get responses
+    get_sim_at_response(resp);
+
+    if (strstr(resp, "ERROR") != NULL)
+        return SIM_AT_RESPONSE_ERR_COMMAND_ERROR;
+    
+    if (strstr(resp, "OK") != NULL)
+        return SIM_AT_RESPONSE_COMMAND_OK;
+    
+    if (strstr(resp, key_word) == NULL)
+        return SIM_AT_RESPONSE_ERR_COMMAND_INVALID;
+    
+    char *p = strchr(resp, ':');
+    if (!p) return SIM_AT_RESPONSE_ERR_INVALID_FORMAT; // invalid format
+    while (*p == ':' || *p == ' ' || *p == '\t')
+        p++;
+    *index = p;
+
+    return SIM_AT_RESPONSE_OK;
+}
+
+sim_at_responses_err_t sim_at_read_ok(char* resp)
+{
+    // Get responses
+    get_sim_at_response(resp);
+
+    if (strstr(resp, "OK") != NULL)
+        return SIM_AT_RESPONSE_COMMAND_OK;
+    if (strstr(resp, "ERROR") != NULL)
+        return SIM_AT_RESPONSE_ERR_COMMAND_ERROR;
+    
+    return SIM_AT_RESPONSE_ERR_COMMAND_INVALID;
+}
+
 
 /* End of file */

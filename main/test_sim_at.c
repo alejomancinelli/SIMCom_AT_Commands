@@ -56,65 +56,66 @@ void app_main(void)
     }
     
     sim_status_control_fun_t phone_functionality;
-    err = get_phone_functionality(&phone_functionality);
-    if (phone_functionality == MINIMUN_FUNCTIONALITY)
+    err = sim_at_get_phone_functionality(&phone_functionality);
+    if (phone_functionality == FUN_MINIMUN_FUNCTIONALITY)
         ESP_LOGI(TAG, "Phone with minimun functionality!");
-    if (phone_functionality == FULL_FUNCTIONALITY)
+    if (phone_functionality == FUN_FULL_FUNCTIONALITY)
         ESP_LOGI(TAG, "Phone with full functionality!");
     
     int rssi = 99, ber = 99; 
+    sim_at_query_signal_quality(&rssi, &ber);
     while (rssi == 99)
     {
-        query_signal_quality(&rssi, &ber);
+        sim_at_query_signal_quality(&rssi, &ber);
         ESP_LOGW(TAG, "No signal! Rssi: %d. Waiting connection...", rssi);
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
 
-    sim_simcard_pin_code_t simcard_code;
-    get_simcard_pin_info(&simcard_code);
-    ESP_LOGI(TAG, "SIM Card code: %d", simcard_code);
+    // sim_simcard_pin_code_t simcard_code;
+    // get_simcard_pin_info(&simcard_code);
+    // ESP_LOGI(TAG, "SIM Card code: %d", simcard_code);
 
-    sim_network_registration_stat_t stat;
-    network_registration(&stat);
+    // sim_network_registration_stat_t stat;
+    // network_registration(&stat);
 
-    sim_gprs_network_registration_stat_t gprs_stat;
-    gprs_network_registration(&gprs_stat);
+    // sim_gprs_network_registration_stat_t gprs_stat;
+    // gprs_network_registration(&gprs_stat);
 
-    int attach;
-    get_packet_domain_attach(&attach);
+    // int attach;
+    // get_packet_domain_attach(&attach);
 
-    int cid, state;
-    get_pdp_context_activate(&cid, &state);
+    // int cid, state;
+    // get_pdp_context_activate(&cid, &state);
 
-    get_pdp_context();
+    // get_pdp_context();
 
-    char addr[32];
-    show_pdp_address(&cid, addr);
+    // char addr[32];
+    // show_pdp_address(&cid, addr);
 
-    // ping("www.google.com.ar");
+    // // ping("www.google.com.ar");
 
-    // NTP
-    get_ntp_config();
-    set_ntp_config("pool.ntp.org", -3);
-    ntp_update_system_time();
+    // // NTP
+    // get_ntp_config();
+    // set_ntp_config("pool.ntp.org", -3);
+    // ntp_update_system_time();
     char current_time[128];
-    get_rtc_time(current_time);
+    sim_at_get_rtc_time(current_time);
 
-    // --- MQTT ---
-    start_mqtt_service();
-    acquire_mqtt_client(0, "Bemakoha4G");
-    connect_mqtt_server(0, "tcp://app.bemakoha.com:1883", 20, 1);
-    vTaskDelay(pdMS_TO_TICKS(5000));
-    mqtt_topic(0, "4gTest");
-    mqtt_payload(0, "Hola!");
-    mqtt_publish(0, 0, 60);
-    vTaskDelay(pdMS_TO_TICKS(5000));
-    disconnect_mqtt_server(0, 60);
-    release_mqtt_client(0);
-    stop_mqtt_service();
+    // // --- MQTT ---
+    // start_mqtt_service();
+    // acquire_mqtt_client(0, "Bemakoha4G");
+    // connect_mqtt_server(0, "tcp://app.bemakoha.com:1883", 20, 1);
+    // vTaskDelay(pdMS_TO_TICKS(5000));
+    // mqtt_topic(0, "4gTest");
+    // mqtt_payload(0, "Hola!");
+    // mqtt_publish(0, 0, 60);
+    // vTaskDelay(pdMS_TO_TICKS(5000));
+    // disconnect_mqtt_server(0, 60);
+    // release_mqtt_client(0);
+    // stop_mqtt_service();
 
     ESP_LOGI(TAG, "Shutting down SIMCom module");
-    // power_down_module();
+    sim_at_power_down_module();
     
     ESP_LOGI(TAG, "Test done.");
 }

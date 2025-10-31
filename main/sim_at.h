@@ -53,8 +53,17 @@ extern "C" {
     SIM_AT_ERR_NOT_INIT = -7,
     SIM_AT_ERR_OVERFLOW = -8,  /* response too long for provided buffer */
     SIM_AT_ERR_ABORTED = -9,
+    SIM_AT_ERR_RESPONSE = -10,
 } sim_at_err_t;
 // TODO: Completar con los errores que faltan capaz?
+
+typedef enum {
+    SIM_AT_RESPONSE_OK = 0,
+    SIM_AT_RESPONSE_COMMAND_OK = -1,
+    SIM_AT_RESPONSE_ERR_INVALID_FORMAT = -2,
+    SIM_AT_RESPONSE_ERR_COMMAND_ERROR = -3,
+    SIM_AT_RESPONSE_ERR_COMMAND_INVALID = -4,
+} sim_at_responses_err_t;
 
 /**
  * -----------------------------
@@ -211,6 +220,34 @@ bool get_sim_at_response(char* buf);
 void ignore_sim_response(void);
 
 /**
+ * @brief Verify the response and get the index of the values
+ * 
+ * @param resp Response buffer
+ * @param key_word Word to verify if present in the response
+ * @param start_response Start index to response values
+ * 
+ * @returns
+ *  - SIM_AT_OK if succeded
+ *  - SIM_AT_COMMAND_OK an OK was received
+ *  - SIM_AT_ERR_COMMAND_ERROR an ERROR was received
+ *  - SIM_AT_ERR_COMMAND_INVALID invalid response
+ *  - SIM_AT_ERR_INVALID_FORMAT invalid response format
+ */
+sim_at_responses_err_t sim_at_read_response_values(char* resp, const char* key_word, char** index);
+
+/**
+ * @brief Verify is the response is OK
+ * 
+ * @param resp Response buffer
+ * 
+ * @returns
+ *  - SIM_AT_COMMAND_OK an OK was received
+ *  - SIM_AT_ERR_COMMAND_ERROR an ERROR was received
+ *  - SIM_AT_ERR_COMMAND_INVALID invalid response
+ */
+sim_at_responses_err_t sim_at_read_ok(char* resp);
+
+/**
  * -----------------------
  * Utility helpers
  * ----------------------- 
@@ -255,6 +292,15 @@ sim_at_err_t sim_at_enable_debug(bool en);
  * @return Error string
  */
 const char* sim_at_err_to_str(sim_at_err_t err);
+
+/**
+ * @brief Returns the corresponding description for a sim response error
+ * 
+ * @param err Error code
+ * 
+ * @return Error string
+ */
+const char* sim_at_response_err_to_str(sim_at_responses_err_t err);
 
 #ifdef __cplusplus
 }

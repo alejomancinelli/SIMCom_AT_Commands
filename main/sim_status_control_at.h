@@ -29,27 +29,54 @@ extern "C" {
  * 
  */
 
-typedef enum {
-    MINIMUN_FUNCTIONALITY = 0,
-    FULL_FUNCTIONALITY,
-    DISABLE_PHONE,
-    FACTORY_TEST_MODE,
-    RESET,
-    OFFLINE_MODE,
-    DISABLE_SIM,
+ /**
+ * ------------------------------------
+ * ----- [ Status control codes ] -----
+ * ------------------------------------ 
+ */
+
+ typedef enum {
+    FUN_ERROR = -1,
+    FUN_MINIMUN_FUNCTIONALITY = 0,
+    FUN_FULL_FUNCTIONALITY = 1,
+    FUN_DISABLE_PHONE = 4,
+    FUN_FACTORY_TEST_MODE = 5,
+    FUN_RESET = 6,
+    FUN_OFFLINE_MODE = 7,
+    FUN_DISABLE_SIM = 8,
 } sim_status_control_fun_t;
 
-sim_at_err_t get_phone_functionality(sim_status_control_fun_t* fun);
-sim_at_err_t set_phone_functionality(sim_status_control_fun_t fun);
+ /**
+ * ---------------------------------------
+ * ----- [ Status control commands ] -----
+ * --------------------------------------- 
+ */
 
-sim_at_err_t query_signal_quality(int* rssi, int* ber);
+/**
+ * @brief Returns the current phone functionality
+ * 
+ * @param fun Phone functinality status code:
+ *  - MINIMUN_FUNCTIONALITY - minimum functionality
+ *  - FULL_FUNCTIONALITY    - full functionality, online mode
+ *  - DISABLE_PHONE         - disable phone both transmit and receive RF circuits
+ *  - FACTORY_TEST_MODE     - Factory Test Mode
+ *  - RESET                 - Reset
+ *  - OFFLINE_MODE          - Offline Mode
+ *  - DISABLE_SIM           - Disable SIM
+ * 
+ * @return SIM_AT_OK if succeded, Error Code if failed
+ */
+sim_at_err_t sim_at_get_phone_functionality(sim_status_control_fun_t* fun);
+sim_at_err_t sim_at_set_phone_functionality(sim_status_control_fun_t fun);
+
+sim_at_err_t sim_at_query_signal_quality(int* rssi, int* ber);
 void parse_rssi(int rssi); // TODO: Completar
 void parse_ber(int ber); // TODO: Completar
 
-sim_at_err_t power_down_module(void);
-sim_at_err_t reset_module(void);
+sim_at_err_t sim_at_power_down_module(void);
+sim_at_err_t sim_at_reset_module(void);
 
-sim_at_err_t get_rtc_time(char* rtc_time);
+sim_at_err_t sim_at_get_rtc_time(char* rtc_time);
 
 #ifdef __cplusplus
 }

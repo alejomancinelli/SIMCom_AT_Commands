@@ -100,6 +100,35 @@ sim_at_err_t sim_at_query_signal_quality(int* rssi, int* ber)
     return SIM_AT_OK; 
 }
 
+int sim_rssi_to_dbm(int rssi)
+{
+    if (rssi == 99) return -999; // Unknown or not detectable
+    if (rssi <= 0)  return -113;
+    if (rssi == 1)  return -111;
+    if (rssi >= 2 && rssi <= 30)
+        return -113 + 2 * rssi;
+    if (rssi >= 31)
+        return -51;
+    return -999; // fallback
+}
+
+const char* sim_ber_to_string(int ber)
+{
+    switch (ber)
+    {
+        case 0:  return "<0.01%";
+        case 1:  return "0.01%–0.1%";
+        case 2:  return "0.1%–0.5%";
+        case 3:  return "0.5%–1.0%";
+        case 4:  return "1.0%–2.0%";
+        case 5:  return "2.0%–4.0%";
+        case 6:  return "4.0%–8.0%";
+        case 7:  return ">=8.0%";
+        case 99: return "Not known or not detectable";
+        default: return "Invalid value";
+    }
+}
+
 sim_at_err_t sim_at_power_down_module(void)
 {
     // Send command

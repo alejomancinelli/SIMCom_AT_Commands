@@ -109,9 +109,30 @@ sim_at_err_t sim_at_set_phone_functionality(sim_status_control_fun_t fun);
  * @return SIM_AT_OK if succeded, Error Code if failed
  */
 sim_at_err_t sim_at_query_signal_quality(int* rssi, int* ber);
-void parse_rssi(int rssi); // TODO: Completar
-void parse_ber(int ber); // TODO: Completar
 
+/**
+ * @brief Parse the +QSC command response to dBm
+ * 
+ * @param rssi QSC <rssi> command response
+ * 
+ * @return dBm value
+ */
+int sim_rssi_to_dbm(int rssi);
+
+/**
+ * @brief Parse the +QSC bit error rate to string
+ * 
+ * @param ber QSC <ber> response
+ * 
+ * @return A string with the bit error rate percentage
+ */
+const char* sim_ber_to_string(int ber);
+
+/**
+ * @brief Power downs sim module
+ * 
+ * @return SIM_AT_OK if succeded
+ */
 sim_at_err_t sim_at_power_down_module(void);
 
 /**

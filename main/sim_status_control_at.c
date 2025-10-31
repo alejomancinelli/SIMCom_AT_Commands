@@ -19,7 +19,6 @@ sim_at_err_t sim_at_get_phone_functionality(sim_status_control_fun_t* fun)
     if (resp_err != SIM_AT_RESPONSE_OK)
     {
         ESP_LOGE(TAG, "Error with AT+CFUN? response: %s", sim_at_response_err_to_str(resp_err));
-        *fun = FUN_ERROR;
         return SIM_AT_ERR_RESPONSE;
     }
     

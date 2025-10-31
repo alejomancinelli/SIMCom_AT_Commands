@@ -66,10 +66,11 @@ void app_main(void)
     sim_at_query_signal_quality(&rssi, &ber);
     while (rssi == 99)
     {
-        sim_at_query_signal_quality(&rssi, &ber);
-        ESP_LOGW(TAG, "No signal! Rssi: %d. Waiting connection...", rssi);
+        ESP_LOGW(TAG, "No signal! Rssi: %d. Waiting connection...", sim_rssi_to_dbm(rssi));
         vTaskDelay(pdMS_TO_TICKS(2000));
+        sim_at_query_signal_quality(&rssi, &ber);
     }
+    ESP_LOGI(TAG, "Module connected! Rssi: %d", sim_rssi_to_dbm(rssi));
 
     // sim_simcard_pin_code_t simcard_code;
     // get_simcard_pin_info(&simcard_code);
@@ -115,7 +116,7 @@ void app_main(void)
     // stop_mqtt_service();
 
     ESP_LOGI(TAG, "Shutting down SIMCom module");
-    sim_at_power_down_module();
+    // sim_at_power_down_module();
     
     ESP_LOGI(TAG, "Test done.");
 }

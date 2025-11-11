@@ -42,7 +42,7 @@ void app_main(void)
     
     vTaskDelay(pdMS_TO_TICKS(5000));
     
-    /* --- 1. Send basic AT --- */
+    /* --- Send basic AT --- */
     char resp[SIM_AT_MAX_RESP_LEN];
     for (int i=0; i<5; i++)
     {
@@ -58,10 +58,11 @@ void app_main(void)
     sim_status_control_fun_t phone_functionality;
     err = sim_at_get_phone_functionality(&phone_functionality);
     if (phone_functionality == FUN_MINIMUN_FUNCTIONALITY)
-        ESP_LOGI(TAG, "Phone with minimun functionality!");
+    ESP_LOGI(TAG, "Phone with minimun functionality!");
     if (phone_functionality == FUN_FULL_FUNCTIONALITY)
-        ESP_LOGI(TAG, "Phone with full functionality!");
+    ESP_LOGI(TAG, "Phone with full functionality!");
     
+    /* --- Status Control AT --- */
     int rssi = 99, ber = 99; 
     sim_at_query_signal_quality(&rssi, &ber);
     while (rssi == 99)
@@ -71,36 +72,44 @@ void app_main(void)
         sim_at_query_signal_quality(&rssi, &ber);
     }
     ESP_LOGI(TAG, "Module connected! Rssi: %d", sim_rssi_to_dbm(rssi));
-
+    
     // sim_simcard_pin_code_t simcard_code;
     // get_simcard_pin_info(&simcard_code);
     // ESP_LOGI(TAG, "SIM Card code: %d", simcard_code);
-
+    
+    /* --- Network AT --- */
     sim_network_registration_stat_t stat;
     sim_at_network_registration(&stat);
     ESP_LOGI(TAG, "Network registration code: %s", sim_network_status_to_string(stat));
+    
+    /* --- Packet Domain AT --- */
+    sim_eps_network_registration_stat_t gprs_stat;
+    sim_at_eps_network_registration(&gprs_stat);
+    ESP_LOGI(TAG, "EPS Network registration code: %s", sim_at_sim_eps_network_status_to_string(gprs_stat));
+    
+    int attach;
+    sim_at_get_packet_domain_attach(&attach);
+    ESP_LOGI(TAG, "Domain service state: %s", (attach > 0 ? "attach" : "detached"));
+    // TODO: Falta probar el set
+    
+    int cid, state;
+    sim_at_get_pdp_context_activate(&cid, &state);
+    ESP_LOGI(TAG, "State of PDP context: %d --> %s", cid, (state > 0 ? "actived" : "deactivated"));
+    
+    sim_at_get_pdp_context();
+    
+    char addr[32];
+    sim_at_show_pdp_address(&cid, addr);
+    ESP_LOGI(TAG, "Show PDP address: %d --> %s", cid, addr);
 
-    // sim_gprs_network_registration_stat_t gprs_stat;
-    // gprs_network_registration(&gprs_stat);
-
-    // int attach;
-    // get_packet_domain_attach(&attach);
-
-    // int cid, state;
-    // get_pdp_context_activate(&cid, &state);
-
-    // get_pdp_context();
-
-    // char addr[32];
-    // show_pdp_address(&cid, addr);
-
-    // // ping("www.google.com.ar");
+    sim_at_ping("www.google.com.ar");
+    vTaskDelay(pdMS_TO_TICKS(5000));
 
     // // NTP
     // get_ntp_config();
     // set_ntp_config("pool.ntp.org", -3);
     // ntp_update_system_time();
-    char current_time[128];
+    char current_time[128];                  
     sim_at_get_rtc_time(current_time);
 
     // // --- MQTT ---

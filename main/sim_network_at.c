@@ -5,7 +5,7 @@ static const char *TAG = "network_at";
 sim_at_err_t sim_at_network_registration(sim_network_registration_stat_t *stat)
 {
     // Send command
-    sim_at_err_t err = sim_at_cmd_sync("AT+CREG?\r\n", 2000);
+    sim_at_err_t err = sim_at_cmd_sync("AT+CREG?\r\n", 9000);
     if (err != SIM_AT_OK)
     {
         ESP_LOGE(TAG, "Error with AT+CREG? commands: %s", sim_at_err_to_str(err));

@@ -189,7 +189,7 @@ sim_at_err_t sim_at_get_rtc_time(char* rtc_time)
     sim_at_responses_err_t resp_err = sim_at_read_response_values(resp, "+CCLK", &data);
     if (resp_err != SIM_AT_RESPONSE_OK)
     {
-        ESP_LOGE(TAG, "Error with AT+CSQ response: %s", sim_at_response_err_to_str(resp_err));
+        ESP_LOGE(TAG, "Error with AT+CCLK? response: %s", sim_at_response_err_to_str(resp_err));
         return SIM_AT_ERR_RESPONSE;
     }
     

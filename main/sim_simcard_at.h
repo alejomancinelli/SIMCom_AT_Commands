@@ -31,17 +31,43 @@ extern "C" {
  * 
  */
 
+/**
+ * ----------------------------------
+ * ----- [ SIM Card Pin codes ] -----
+ * ---------------------------------- 
+ */
+
 typedef enum {
-    READY = 0,
-    SIM_PIN,
-    SIM_PUK,
-    PH_SIM_PIN,
-    SIM_PIN_2,
-    SIM_PUK_2,
-    PH_NET_PIN,
+    SIMCARD_READY = 0,
+    SIMCARD_SIM_PIN,
+    SIMCARD_SIM_PUK,
+    SIMCARD_PH_SIM_PIN,
+    SIMCARD_SIM_PIN_2,
+    SIMCARD_SIM_PUK_2,
+    SIMCARD_PH_NET_PIN,
 } sim_simcard_pin_code_t;
 
-sim_at_err_t get_simcard_pin_info(sim_simcard_pin_code_t* code);
+/**
+ * --------------------------------------
+ * ----- [ SIM Card commands ] -----
+ * -------------------------------------- 
+ */
+
+ /**
+  * @brief Get if the SIM Card needs a PIN to be initialized
+  * 
+  * @param code SIM Card Pin code:
+  * - SIMCARD_READY: ME is not pending for any password
+  * - SIMCARD_SIM_PIN: ME is waiting SIM PIN to be given
+  * - SIMCARD_SIM_PUK: ME is waiting SIM PUK to be given
+  * - SIMCARD_PH_SIM_PIN: ME is waiting phone-to-SIM card password to be given
+  * - SIMCARD_SIM_PIN_2: ME is waiting SIM PIN2 to be given
+  * - SIMCARD_SIM_PUK_2: ME is waiting SIM PUK2 to be given
+  * - SIMCARD_PH_NET_PIN: ME is waiting network personalization password to be given
+  * 
+  * @return SIM_AT_OK if succeded, Error Code if failed
+  */
+sim_at_err_t sim_at_get_simcard_pin_info(sim_simcard_pin_code_t* code);
 
 #ifdef __cplusplus
 }

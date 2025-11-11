@@ -73,9 +73,10 @@ void app_main(void)
     }
     ESP_LOGI(TAG, "Module connected! Rssi: %d", sim_rssi_to_dbm(rssi));
     
-    // sim_simcard_pin_code_t simcard_code;
-    // get_simcard_pin_info(&simcard_code);
-    // ESP_LOGI(TAG, "SIM Card code: %d", simcard_code);
+    /* --- SIM Card AT --- */
+    sim_simcard_pin_code_t simcard_code;
+    sim_at_get_simcard_pin_info(&simcard_code);
+    ESP_LOGI(TAG, "SIM Card code: %d", simcard_code);
     
     /* --- Network AT --- */
     sim_network_registration_stat_t stat;

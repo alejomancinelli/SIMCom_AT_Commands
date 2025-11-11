@@ -169,7 +169,7 @@ sim_at_err_t sim_at_deinit(void);
  */
 
 /**
- * @brief Send an AT command synchronously (blocking - do not call from ISR.).
+ * @brief Send an AT command synchronously (blocking - do not call from ISR).
  *
  * @param cmd NUL-terminated AT command (e.g. "AT+CGSN\r\n"). Must be <= SIM_AT_MAX_CMD_LEN.
  * @param timeout_ms how long to wait for final response (OK/ERROR). If zero, uses default configured timeout.
@@ -182,6 +182,19 @@ sim_at_err_t sim_at_deinit(void);
  *
  */
 sim_at_err_t sim_at_cmd_sync(const char *cmd, uint32_t timeout_ms);
+
+/**
+ * @brief Waits for AT command response (blocking - do not call from ISR).
+ * 
+ * @param timeout_ms how long to wait for final response (OK/ERROR). If zero, uses default configured timeout.
+ * 
+ * @return
+ *  - SIM_AT_OK on success
+ *  - SIM_AT_ERR_NOT_INIT.
+ *  - SIM_AT_ERR_TIMEOUT
+ *  - SIM_AT_ERR_UART
+ */
+sim_at_err_t sim_at_wait_response(uint32_t timeout_ms);
 
 /**
  * Send an AT command asynchronously.

@@ -410,6 +410,21 @@ sim_at_err_t sim_at_cmd_sync(const char *cmd, uint32_t timeout_ms)
     return SIM_AT_OK;
 }
 
+sim_at_err_t sim_at_wait_response(uint32_t timeout_ms)
+{
+    if (!g_inited)
+        return SIM_AT_ERR_NOT_INIT;
+
+    // Wait for completion
+    TickType_t wait_ticks = pdMS_TO_TICKS((timeout_ms == 0) ? g_cfg.default_cmd_timeout_ms : timeout_ms);
+    if (xSemaphoreTake(s_sync_sem, wait_ticks) == pdFALSE)
+    {
+        return SIM_AT_ERR_TIMEOUT;
+    }
+
+    return SIM_AT_OK;   
+}
+
 // TODO: No sé si sirve
 sim_at_err_t sim_at_cmd_sync_ignore_response(const char *cmd, uint32_t timeout_ms, uint8_t num_responses)
 {

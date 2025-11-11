@@ -28,6 +28,12 @@ extern "C" {
  * 
  */
 
+ /**
+ * ------------------------------------------
+ * ----- [ Network registration codes ] -----
+ * ------------------------------------------ 
+ */
+
 typedef enum {
     NOT_REGISTERED = 0,
     REGISTERED,
@@ -40,10 +46,32 @@ typedef enum {
     EMERGENCY = 11,
 } sim_network_registration_stat_t;
 
-sim_at_err_t network_registration(sim_network_registration_stat_t* stat); // TODO: Se ignora n
+ /**
+ * ---------------------------------------------
+ * ----- [ Network registration commands ] -----
+ * --------------------------------------------- 
+ */
+
+/**
+ * @brief Returns the status of result code presentation and an integer <stat> which shows whether
+ * the network has currently indicated the registration of the ME.
+ * 
+ * @param stat Status code
+ * 
+ * @return SIM_AT_OK if succeded, Error Code if failed
+ */
+sim_at_err_t sim_at_network_registration(sim_network_registration_stat_t* stat);
+
+/**
+ * @brief Parse the +REG status code to string
+ * 
+ * @param stat Status code
+ * 
+ * @return A string with the status code description
+ */
+const char* sim_network_status_to_string(sim_network_registration_stat_t stat);
 
 // TODO: COPS por el momento no se utiliza, pero podría ser necesaria
-
 
 #ifdef __cplusplus
 }

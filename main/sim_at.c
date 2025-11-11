@@ -511,6 +511,9 @@ sim_at_err_t sim_at_enable_debug(bool en)
 
 sim_at_responses_err_t sim_at_read_response_values(char* resp, const char* key_word, char** index)
 {
+    // TODO: Falta analizar el caso donde se reciben mensajes URC (SMS, CALLS, etc)
+    // Habría que limitarlas al principio, y luego capaz ver que pasa si se recibne igual
+
     // Get responses
     get_sim_at_response(resp);
 

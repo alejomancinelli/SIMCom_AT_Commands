@@ -76,8 +76,9 @@ void app_main(void)
     // get_simcard_pin_info(&simcard_code);
     // ESP_LOGI(TAG, "SIM Card code: %d", simcard_code);
 
-    // sim_network_registration_stat_t stat;
-    // network_registration(&stat);
+    sim_network_registration_stat_t stat;
+    sim_at_network_registration(&stat);
+    ESP_LOGI(TAG, "Network registration code: %s", sim_network_status_to_string(stat));
 
     // sim_gprs_network_registration_stat_t gprs_stat;
     // gprs_network_registration(&gprs_stat);

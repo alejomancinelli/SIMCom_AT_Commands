@@ -397,7 +397,10 @@ sim_at_err_t sim_at_cmd_sync(const char *cmd, uint32_t timeout_ms)
         return r;
     }
 
-    /* wait for completion */
+    // Drain pending semaphore gives
+    while (xSemaphoreTake(s_sync_sem, 0) == pdTRUE);
+
+    // Wait for completion
     TickType_t wait_ticks = pdMS_TO_TICKS((timeout_ms == 0) ? g_cfg.default_cmd_timeout_ms : timeout_ms);
     if (xSemaphoreTake(s_sync_sem, wait_ticks) == pdFALSE)
     {

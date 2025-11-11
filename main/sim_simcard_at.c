@@ -5,7 +5,7 @@ static const char *TAG = "simcard_at";
 sim_at_err_t sim_at_get_simcard_pin_info(sim_simcard_pin_code_t* code)
 {
     // Sends command
-    sim_at_err_t err = sim_at_cmd_sync("AT+CPIN?\r\n", 2000);
+    sim_at_err_t err = sim_at_cmd_sync("AT+CPIN?\r\n", 9000);
     if (err != SIM_AT_OK)
     {   
         ESP_LOGE(TAG, "Error with AT+CPIN? commands: %s", sim_at_err_to_str(err));
@@ -52,5 +52,6 @@ sim_at_err_t sim_at_get_simcard_pin_info(sim_simcard_pin_code_t* code)
         ESP_LOGE(TAG, "Ok response was not received: %s", sim_at_response_err_to_str(resp_err));
         return SIM_AT_ERR_RESPONSE;
     }
+    
     return SIM_AT_OK; 
 }

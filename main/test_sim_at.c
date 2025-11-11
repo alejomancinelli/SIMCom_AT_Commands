@@ -102,14 +102,17 @@ void app_main(void)
     char addr[32];
     sim_at_show_pdp_address(&cid, addr);
     ESP_LOGI(TAG, "Show PDP address: %d --> %s", cid, addr);
-
+    
     sim_at_ping("www.google.com.ar");
     vTaskDelay(pdMS_TO_TICKS(5000));
-
-    // // NTP
-    // get_ntp_config();
-    // set_ntp_config("pool.ntp.org", -3);
-    // ntp_update_system_time();
+    
+    /* --- NTP --- */
+    sim_at_get_ntp_config();
+    sim_at_set_ntp_config("pool.ntp.org", -3);
+    sim_at_ntp_err_code_t ntp_err;
+    sim_at_ntp_update_system_time(&ntp_err);
+    if (ntp_err != NTP_OPERATION_SUCCEEDED)
+        ESP_LOGE(TAG, "NTP update error: %d", (int)ntp_err);
     char current_time[128];                  
     sim_at_get_rtc_time(current_time);
 

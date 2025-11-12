@@ -103,8 +103,8 @@ void app_main(void)
     sim_at_show_pdp_address(&cid, addr);
     ESP_LOGI(TAG, "Show PDP address: %d --> %s", cid, addr);
     
-    sim_at_ping("www.google.com.ar");
-    vTaskDelay(pdMS_TO_TICKS(5000));
+    // sim_at_ping("www.google.com.ar");
+    // vTaskDelay(pdMS_TO_TICKS(5000));
     
     /* --- NTP --- */
     sim_at_get_ntp_config();
@@ -116,18 +116,19 @@ void app_main(void)
     char current_time[128];                  
     sim_at_get_rtc_time(current_time);
 
-    // // --- MQTT ---
-    // start_mqtt_service();
-    // acquire_mqtt_client(0, "Bemakoha4G");
-    // connect_mqtt_server(0, "tcp://app.bemakoha.com:1883", 20, 1);
-    // vTaskDelay(pdMS_TO_TICKS(5000));
-    // mqtt_topic(0, "4gTest");
-    // mqtt_payload(0, "Hola!");
-    // mqtt_publish(0, 0, 60);
-    // vTaskDelay(pdMS_TO_TICKS(5000));
-    // disconnect_mqtt_server(0, 60);
-    // release_mqtt_client(0);
-    // stop_mqtt_service();
+    /* --- MQTT --- */ 
+    sim_at_start_mqtt_service();
+    sim_at_acquire_mqtt_client(0, "Bemakoha4G");
+    sim_at_connect_mqtt_server(0, "tcp://app.bemakoha.com:1883", 20, 1);
+    vTaskDelay(pdMS_TO_TICKS(1000)); // Esperar un poco que conecte
+    sim_at_mqtt_topic(0, "4gTest");
+    sim_at_mqtt_payload(0, "Hola!");
+    sim_at_mqtt_publish(0, 0, 60);
+    vTaskDelay(pdMS_TO_TICKS(1000)); // Esperar que mande el mensaje
+    sim_at_disconnect_mqtt_server(0, 60);
+    vTaskDelay(pdMS_TO_TICKS(1000)); // Esperar que se desconecte
+    sim_at_release_mqtt_client(0);
+    sim_at_stop_mqtt_service();
 
     ESP_LOGI(TAG, "Shutting down SIMCom module");
     // sim_at_power_down_module();

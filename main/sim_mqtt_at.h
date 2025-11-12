@@ -33,6 +33,12 @@ extern "C" {
  * 
  */
 
+/**
+ * --------------------------------
+ * ----- [ MQTT error codes ] -----
+ * -------------------------------- 
+ */
+
 typedef enum {
     SIM_MQTT_OK                                 = 0,  // Operation succeeded
     SIM_MQTT_ERR_FAIL                           = 1,  // General failure
@@ -72,20 +78,118 @@ typedef enum {
     SIM_MQTT_ERR_DISCONNECT_FAIL                = 35  // Disconnect from server failed
 } sim_mqtt_err_codes_t;
 
-const char* sim_mqtt_err_to_string(sim_mqtt_err_codes_t err);
+/**
+ * -----------------------------
+ * ----- [ MQTT commands ] -----
+ * ----------------------------- 
+ */
 
-sim_at_err_t start_mqtt_service(void);
-sim_at_err_t stop_mqtt_service(void);
+/**
+ * @brief Parse the mqtt errors codes to string
+ * 
+ * @param err mqtt error code
+ * 
+ * @return A string with the status code description
+ */
+ const char* sim_mqtt_err_to_string(sim_mqtt_err_codes_t err);
 
-sim_at_err_t acquire_mqtt_client(int client_index, const char* client_id);
-sim_at_err_t release_mqtt_client(int client_index);
+ /**
+  * @brief Start MQTT service by activating PDP context. This command must be executed before any other 
+  * MQTT related operations.
+  * 
+  * @returns SIM_AT_OK if succeded, Error Code if failed
+  */
+ sim_at_err_t sim_at_start_mqtt_service(void);
 
-sim_at_err_t connect_mqtt_server(int client_index, char* server_addr, int keepalive_time, int clean_session);
-sim_at_err_t disconnect_mqtt_server(int client_id, int timeout);
+ /**
+  * @brief Stops MQTT service
+  * 
+  * @returns SIM_AT_OK if succeded, Error Code if failed
+  */
+sim_at_err_t sim_at_stop_mqtt_service(void);
 
-sim_at_err_t mqtt_topic(int client_index, const char* topic);
-sim_at_err_t mqtt_payload(int client_index, const char* payload);
-sim_at_err_t mqtt_publish(int client_index, int qos, int pub_timeout);
+
+/**
+ * @brief Acquire a MQTT client. It must be called before all commands about MQTT connect and after AT+CMQTTSTART.
+ * 
+ * @param client_index A numeric parameter that identifies a client. The range of permitted values is 0 to 1.
+ * @param client_id It specifies a unique identifier for the client. The string length is from 1 to 128 bytes.
+ * 
+ * @returns SIM_AT_OK if succeded, Error Code if failed
+ */
+sim_at_err_t sim_at_acquire_mqtt_client(int client_index, const char* client_id);
+
+/**
+ * @brief Release a MQTT client. It must be called after AT+CMQTTDISC and before AT+CMQTTSTOP.
+ * 
+ * @param client_index A numeric parameter that identifies a client. The range of permitted values is 0 to 1.
+ * 
+ * @returns SIM_AT_OK if succeded, Error Code if failed
+ */
+sim_at_err_t sim_at_release_mqtt_client(int client_index);
+
+
+/**
+ * @brief Connect to a MQTT server.
+ * 
+ * @param client_index A numeric parameter that identifies a client. The range of permitted values is 0 to 1.
+ * @param server_addr The string that described the server address and port. The range of the string length 
+ * is 9 to 256 bytes. The string should be like this "tcp://116.247.119.165:5141", must begin with "tcp://".
+ * @param keepalive_time The time interval between two messages received from a client. The client will send 
+ * a keep-alive packet when there is no message sent to server after song long time. The range is from 1s to 64800s.
+ * @param clean_session The clean session flag. The value range is from 0 to 1, and default value is 0.
+ * 
+ * @returns SIM_AT_OK if succeded, Error Code if failed
+ */
+sim_at_err_t sim_at_connect_mqtt_server(int client_index, const char* server_addr, int keepalive_time, int clean_session);
+
+/**
+ * @brief Disconnects from the server.
+ * 
+ * @param client_index A numeric parameter that identifies a client. The range of permitted values is 0 to 1.
+ * @param timeout The timeout value for disconnection. The unit is second. The range is 1s to 180s. The default 
+ * value is 0s (not set the timeout value).
+ * 
+ * @returns SIM_AT_OK if succeded, Error Code if failed
+ */
+sim_at_err_t sim_at_disconnect_mqtt_server(int client_index, int timeout);
+
+
+/**
+ * @brief Input the topic of a publish message.
+ * 
+ * @param client_index A numeric parameter that identifies a client. The range of permitted values is 0 to 1.
+ * @param topic The length of input topic data. The publish message topic should be UTF-encoded string. 
+ * The range is from 1 to 1024 bytes.
+ * 
+ * @returns SIM_AT_OK if succeded, Error Code if failed
+ */
+sim_at_err_t sim_at_mqtt_topic(int client_index, const char* topic);
+
+/**
+ * @brief Input the message body of a publish message.
+ * 
+ * @param client_index A numeric parameter that identifies a client. The range of permitted values is 0 to 1.
+ * @param payload The length of input message data. The publish message should be UTF-encoded string. 
+ * The range is from 1 to 10240 bytes.
+ * 
+ * @returns SIM_AT_OK if succeded, Error Code if failed
+ */
+sim_at_err_t sim_at_mqtt_payload(int client_index, const char* payload);
+
+/**
+ * @brief Publish a message to MQTT server.
+ * 
+ * @param client_index A numeric parameter that identifies a client. The range of permitted values is 0 to 1.
+ * @param qos The publish message’s qos. The range is from 0 to 2.
+ *  - 0 at most once
+ *  - 1 at least once
+ *  - 2 exactly once 
+ * @param pub_timeout The publishing timeout interval value. The range is from 1s to 180s.
+ * 
+ * @returns SIM_AT_OK if succeded, Error Code if failed
+ */
+sim_at_err_t sim_at_mqtt_publish(int client_index, int qos, int pub_timeout);
 
 #ifdef __cplusplus
 }

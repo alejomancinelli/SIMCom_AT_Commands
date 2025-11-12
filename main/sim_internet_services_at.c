@@ -4,8 +4,7 @@ static const char *TAG = "internet_services_at";
 
 sim_at_err_t sim_at_get_ntp_config(void)
 {
-    // Send comman
-    char resp[SIM_AT_MAX_RESP_LEN];
+    // Send command
     sim_at_err_t err = sim_at_cmd_sync("AT+CNTP?\r\n", 9000);
     if (err != SIM_AT_OK)
     {   
@@ -14,6 +13,7 @@ sim_at_err_t sim_at_get_ntp_config(void)
     }
 
     // Reads response
+    char resp[SIM_AT_MAX_RESP_LEN];
     char *data;
     sim_at_responses_err_t resp_err = sim_at_read_response_values(resp, "+CNTP", &data);
     if (resp_err != SIM_AT_RESPONSE_OK)
@@ -67,7 +67,6 @@ sim_at_err_t sim_at_set_ntp_config(const char* host, int timezone)
 sim_at_err_t sim_at_ntp_update_system_time(sim_at_ntp_err_code_t* ntp_err)
 {
     // Send command
-    char resp[SIM_AT_MAX_RESP_LEN];
     sim_at_err_t err = sim_at_cmd_sync("AT+CNTP\r\n", 9000);
     if (err != SIM_AT_OK)
     {   
@@ -76,6 +75,7 @@ sim_at_err_t sim_at_ntp_update_system_time(sim_at_ntp_err_code_t* ntp_err)
     }
 
     // Read OK responss
+    char resp[SIM_AT_MAX_RESP_LEN];
     sim_at_responses_err_t resp_err = sim_at_read_ok(resp);
     if (resp_err != SIM_AT_RESPONSE_COMMAND_OK)
     {

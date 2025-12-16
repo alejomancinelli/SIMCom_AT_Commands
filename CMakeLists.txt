@@ -1,8 +1,13 @@
-# For more information about build system see
-# https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html
-# The following five lines of boilerplate have to be in your project's
-# CMakeLists in this exact order for cmake to work correctly
-cmake_minimum_required(VERSION 3.16)
+set(srcs
+	srcs/sim_at.c
+    srcs/sim_status_control_at.c
+    srcs/sim_network_at.c
+    srcs/sim_simcard_at.c
+    srcs/sim_packet_domain_at.c
+    srcs/sim_mqtt_at.c 
+)
 
-include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(main)
+idf_component_register(
+    SRCS ${srcs} 
+    INCLUDE_DIRS "include"
+)

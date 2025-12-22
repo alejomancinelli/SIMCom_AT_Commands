@@ -8,6 +8,12 @@ static bool g_inited = false;
 
 /* Public API implementations */
 
+simcom_err_t simcom_uart_debug(bool en)
+{
+    simcom_err_t err = simcom_enable_debug(en);
+    return err;
+}
+
 simcom_err_t simcom_init(const simcom_config_t *cfg)
 {
     if (!cfg)
@@ -71,18 +77,6 @@ simcom_err_t simcom_init(const simcom_config_t *cfg)
     }
 
     g_inited = true;
-
-    // TODO: Ver si queda acá, o se pasa como argumento, o qué
-    simcom_enable_debug(true);
-    
-    // TODO: Ver de mejorar esto? Capaz tendría que ir aparte
-    // Además faltaría checkear que se haya podido sincronizar correctamente
-    /* disable echo by default to simplify parsing (try but tolerate failure) */
-    char resp[SIM_AT_MAX_RESP_LEN];
-    simcom_cmd_sync("AT\r\n", 2000);
-    simcom_ignore_resp();
-    simcom_cmd_sync("ATE0\r\n", 2000);
-    simcom_ignore_resp();
 
     ESP_LOGI(TAG, "sim_at initialized");
     simcom_set_init_flag(true);

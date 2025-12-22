@@ -19,6 +19,8 @@ extern "C" {
  * ----------------------------------- 
  */
 
+simcom_err_t simcom_uart_debug(bool en);
+
 /**
  * @brief Initialize the SIM AT core library.
  * - This function configures UART, creates internal static resources and starts the parser task.
@@ -46,6 +48,7 @@ simcom_err_t simcom_init(const simcom_config_t *cfg);
  *  - SIM_AT_ERR_NOT_INIT if the API is not initialized
  */
 simcom_err_t simcom_deinit(void);
+
 
 
 

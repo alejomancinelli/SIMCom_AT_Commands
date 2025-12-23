@@ -425,6 +425,51 @@ simcom_err_t simcom_get_simcard_pin_info(sim_simcard_pin_code_t* code);
 
 
 
+/* ================================================ */
+/* =============== [ SMS commands ] =============== */
+/* ================================================ */
+
+/**
+ * [--- List of available commands ---]
+ * 
+ * [ ] AT+CSMS                  = Select message service
+ * [ ] AT+CPMS                  = Preferred message storage
+ * [ ] AT+CMGF                  = Select SMS message format
+ * [ ] AT+CSCA                  = SMS service centre address
+ * [ ] AT+CSCB                  = Select cell broadcast message indication
+ * [ ] AT+CSMP                  = Set text mode parameters
+ * [ ] AT+CSDH                  = Show text mode parameters
+ * [ ] AT+CNMA                  = New message acknowledgement to ME/TA
+ * [x] AT+CNMI                  = New message indications to TE
+ * [ ] AT+CGSMS                 = Select service for MO SMS messages
+ * [ ] AT+CMGL                  = List SMS messages from preferred store
+ * [ ] AT+CMGR                  = Read message
+ * [ ] AT+CMGS                  = Send message
+ * [ ] AT+CMSS                  = Send message from storages
+ * [ ] AT+CMGW                  = Write message to memory
+ * [ ] AT+CMGD                  = Delete message
+ * [ ] AT+CMGMT                 = Change message status
+ * [ ] AT+CMVP                  = Set message valid period
+ * [ ] AT+CMGRD                 = Read and delete message
+ * [ ] AT+CMGSEX                = Send message
+ * [ ] AT+CMSSEX                = Send multi messages from storage
+ * [ ] AT+CCONCINDEX            = Report Concatenated SMS Index
+ * 
+ */
+
+/**
+ * @brief TODO: Completar
+ * 
+ * @param mode
+ * @param mt
+ * @param bm
+ * @param ds
+ * @param bfr
+ * 
+ * @return SIM_AT_OK if succeded, Error Code if failed
+ */
+simcom_err_t simcom_sms_new_indications_set(uint8_t mode, uint8_t mt, uint8_t bm, uint8_t ds, uint8_t bfr);
+
 /* =============================================================== */
 /* =============== [ Internet Servicies commands ] =============== */
 /* =============================================================== */

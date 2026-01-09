@@ -237,9 +237,9 @@ const char* simcom_pdp_type_to_str(sim_pdp_type_t pdp_type)
 {
     switch(pdp_type)
     {
-        case PDP_IP: return "PDP_IP";
-        case PDP_IPV6: return "PDP_IPV6"; 
-        case PDP_IPV4V6: return "PDP_IPV4V6";
+        case PDP_IP: return "IP";
+        case PDP_IPV6: return "IPV6"; 
+        case PDP_IPV4V6: return "IPV4V6";
         default: return NULL;
     }
 }

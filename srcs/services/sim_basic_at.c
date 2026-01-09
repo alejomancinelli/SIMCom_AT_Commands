@@ -3,6 +3,39 @@
 
 static const char *TAG = "basic_at";
 
+simcom_err_t simcom_wait_atready(void)
+{
+    simcom_err_t err;
+    err = simcom_wait_resp(10000);
+    if (err != SIM_AT_OK)
+    {
+        ESP_LOGE(TAG, "SIMCom not initilized");
+        return err;
+    }
+    
+    // Reads response
+    char resp[SIM_AT_MAX_RESP_LEN];
+    char *data;
+    simcom_responses_err_t resp_err = simcom_read_resp_values(resp, "*ATREADY", &data);
+    if (resp_err != SIM_AT_RESPONSE_OK)
+    {
+        ESP_LOGE(TAG, "Error with *ATREADY response: %s", simcom_resp_err_to_str(resp_err));
+        return SIM_AT_ERR_RESPONSE;
+    }
+
+    int err_code;
+    if (sscanf(data, "%d", &err_code) != 1)
+    return SIM_AT_ERR_RESPONSE;
+
+    if (err_code != 1)
+    {
+        ESP_LOGE(TAG, "SIMCom not initilized");
+        return err;
+    }
+
+    return SIM_AT_OK;
+}
+
 simcom_err_t simcom_comm_test(void)
 {
     // Send command

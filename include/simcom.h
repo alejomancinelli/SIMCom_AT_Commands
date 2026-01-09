@@ -56,10 +56,9 @@ simcom_err_t simcom_deinit(void);
 /* =============== [ Basic Commands ] =============== */
 /* ================================================== */
 
+simcom_err_t simcom_wait_atready(void);
 simcom_err_t simcom_comm_test(void);
 simcom_err_t simcom_enable_echo(bool enable);
-
-
 
 /* ================================================== */
 /* =============== [ Status Control ] =============== */

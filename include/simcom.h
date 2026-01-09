@@ -49,7 +49,7 @@ simcom_err_t simcom_init(const simcom_config_t *cfg);
  */
 simcom_err_t simcom_deinit(void);
 
-
+simcom_err_t simcom_control_pwrkey(bool state);
 
 
 /* ================================================== */

@@ -52,15 +52,15 @@ simcom_err_t simcom_init(const simcom_config_t *cfg)
     ESP_LOGI(TAG, "UART port %d initialized on TX=%d, RX=%d", g_cfg.uart_port, g_cfg.tx_pin, g_cfg.rx_pin);
 
     // TODO: Controlar bien esto y hacerlo funcionar
-    // /* configure control pins as outputs if set */
+    /* configure control pins as outputs if set */
     // if (g_cfg.control_pins.dtr_pin >= 0) {
     //     gpio_set_direction(g_cfg.control_pins.dtr_pin, GPIO_MODE_OUTPUT);
     //     gpio_set_level(g_cfg.control_pins.dtr_pin, 0);
     // }
-    // if (g_cfg.control_pins.pwrkey_pin >= 0) {
-    //     gpio_set_direction(g_cfg.control_pins.pwrkey_pin, GPIO_MODE_OUTPUT);
-    //     gpio_set_level(g_cfg.control_pins.pwrkey_pin, 0);
-    // }
+    if (g_cfg.control_pins.pwrkey_pin >= 0) {
+        gpio_set_direction(g_cfg.control_pins.pwrkey_pin, GPIO_MODE_OUTPUT);
+        gpio_set_level(g_cfg.control_pins.pwrkey_pin, 0);
+    }
     // if (g_cfg.control_pins.rst_pin >= 0) {
     //     gpio_set_direction(g_cfg.control_pins.rst_pin, GPIO_MODE_OUTPUT);
     //     gpio_set_level(g_cfg.control_pins.rst_pin, 1); /* assume active-low reset */
@@ -112,15 +112,15 @@ simcom_err_t simcom_deinit(void)
 //     return SIM_AT_OK;
 // }
 
-// simcom_err_t sim_at_control_pwrkey(bool state)
-// {
-//     if (!g_inited)
-//         return SIM_AT_ERR_NOT_INIT;
-//     if (g_cfg.control_pins.pwrkey_pin < 0)
-//         return SIM_AT_ERR_INVALID_ARG;
-//     gpio_set_level(g_cfg.control_pins.pwrkey_pin, state ? 1 : 0);
-//     return SIM_AT_OK;
-// }
+simcom_err_t simcom_control_pwrkey(bool state)
+{
+    if (!g_inited)
+        return SIM_AT_ERR_NOT_INIT;
+    if (g_cfg.control_pins.pwrkey_pin < 0)
+        return SIM_AT_ERR_INVALID_ARG;
+    gpio_set_level(g_cfg.control_pins.pwrkey_pin, state ? 1 : 0);
+    return SIM_AT_OK;
+}
 
 // simcom_err_t sim_at_control_reset(bool state)
 // {

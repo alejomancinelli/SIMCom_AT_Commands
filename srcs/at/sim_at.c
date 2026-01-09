@@ -113,7 +113,7 @@ const char* simcom_resp_err_to_str(simcom_responses_err_t err)
  * @param data String of bytes to print
  * @param len Lenght of the string
  */
-static void print_bytes_(uint8_t* data, int len)
+static void _print_bytes(uint8_t* data, int len)
 {
     ESP_LOGI(TAG, "Received %d bytes:", len);
     for (int i = 0; i < len; i++) {
@@ -128,7 +128,7 @@ static void print_bytes_(uint8_t* data, int len)
  * @param cmd Command string
  * @param len String lenght
  */
-static void print_sent_command_(const char* cmd, int len)
+static void _print_sent_command(const char* cmd, int len)
 {
     char clean_cmd[SIM_AT_MAX_CMD_LEN]; // use a safe upper bound constant
     strncpy(clean_cmd, cmd, sizeof(clean_cmd) - 1);
@@ -142,7 +142,7 @@ static void print_sent_command_(const char* cmd, int len)
  * 
  * @param data Response string
  */
-static void add_resp_to_buff_(const char* data)
+static void _add_resp_to_buff(const char* data)
 {
     if (s_resp_head < SIM_AT_MAX_LINES)
     {
@@ -167,7 +167,7 @@ static void add_resp_to_buff_(const char* data)
 /**
  * @brief Resets response line buffer
  */
-static void reset_line_buff_(void)
+static void _reset_line_buff(void)
 {
     s_line_pos = 0;
     s_line_buf[0] = '\0';
@@ -184,7 +184,7 @@ static void reset_line_buff_(void)
  *  - SIM_AT_ERR_UART if there is a UART error
  *  
  */ 
-static simcom_err_t prv_uart_write_cmd_(const char *cmd)
+static simcom_err_t _prv_uart_write_cmd(const char *cmd)
 {
     if (!g_inited)
         return SIM_AT_ERR_NOT_INIT;
@@ -197,13 +197,22 @@ static simcom_err_t prv_uart_write_cmd_(const char *cmd)
     if (written != len)
         return SIM_AT_ERR_UART;
 
-    if (g_debug) print_sent_command_(cmd, len);
+    if (g_debug) _print_sent_command(cmd, len);
 
     return SIM_AT_OK;
 }
 
+static bool _response_is_urc(const char *line)
+{
+    return (
+        strstr(line, "+CGEV:") != NULL ||
+        strstr(line, "SMS") != NULL ||
+        // extend as needed
+    );
+}
+
 /* Parser task: reads bytes from UART, assembles lines, routes them */
-static void s_parser_task_fn_(void *arg)
+static void _s_parser_task_fn(void *arg)
 {
     const TickType_t rx_wait = pdMS_TO_TICKS(UART_MAX_WAITTIME);
     uint8_t *data = (uint8_t *)malloc(SIM_AT_MAX_RESP_LEN + 1);
@@ -218,7 +227,7 @@ static void s_parser_task_fn_(void *arg)
         }
 
         // Print received bytes
-        if (g_debug) print_bytes_(data, len);
+        if (g_debug) _print_bytes(data, len);
 
         // Form responses
         for (int i = 0; i < len; i++)
@@ -245,29 +254,31 @@ static void s_parser_task_fn_(void *arg)
                 // Check for empty responses
                 if (s_line_pos <= 0)
                 {
-                    reset_line_buff_();
+                    _reset_line_buff();
                     continue;
                 }
 
                 // Write to circular buffer
                 // xSemaphoreTake(s_resp_mutex, portMAX_DELAY); // TODO: Por el momento no pero no es mala
+                if (_response_is_urc(s_line_buf) == false)
+                {
+                    _add_resp_to_buff(s_line_buf);
+    
+                    // xSemaphoreGive(s_resp_mutex); // TODO: Por el momento no pero no es mala
+                    xSemaphoreGive(s_sync_sem); // Notify new response available
+                }
 
-                add_resp_to_buff_(s_line_buf);
-
-                // xSemaphoreGive(s_resp_mutex); // TODO: Por el momento no pero no es mala
-                xSemaphoreGive(s_sync_sem); // Notify new response available
-
-                reset_line_buff_();
+                _reset_line_buff();
             }
             // Sometimes it responds with '>' to complete with additional data
             if (c == '>')
             {
-                add_resp_to_buff_(s_line_buf);
+                _add_resp_to_buff(s_line_buf);
                 
                 // xSemaphoreGive(s_resp_mutex); // TODO: Por el momento no pero no es mala
                 xSemaphoreGive(s_sync_sem); // Notify new response available
 
-                reset_line_buff_();
+                _reset_line_buff();
             }
         }
     }
@@ -287,7 +298,7 @@ static void s_parser_task_fn_(void *arg)
 //         return SIM_AT_ERR_BUSY;
 //     }
 
-//     simcom_err_t r = prv_uart_write_cmd_(cmd);
+//     simcom_err_t r = _prv_uart_write_cmd(cmd);
 //     if (r != SIM_AT_OK) {
 //         /* mark done with uart error */
 //         xSemaphoreTake(s_sync_sem, portMAX_DELAY);
@@ -310,7 +321,7 @@ simcom_err_t simcom_cmd_sync(const char *cmd, uint32_t timeout_ms)
     s_resp_count = 0;
     s_resp_tail = s_resp_head;
     
-    simcom_err_t r = prv_uart_write_cmd_(cmd);
+    simcom_err_t r = _prv_uart_write_cmd(cmd);
     if (r != SIM_AT_OK)
     {
         ESP_LOGE(TAG, "Error sending UART data");
@@ -353,7 +364,7 @@ simcom_err_t simcom_cmd_sync_ignore_resp(const char *cmd, uint32_t timeout_ms, u
     if (strlen(cmd) >= SIM_AT_MAX_CMD_LEN)
         return SIM_AT_ERR_INVALID_ARG;
 
-    simcom_err_t r = prv_uart_write_cmd_(cmd);
+    simcom_err_t r = _prv_uart_write_cmd(cmd);
     if (r != SIM_AT_OK)
     {
         ESP_LOGE(TAG, "Error sending UART data");
@@ -457,7 +468,7 @@ simcom_responses_err_t simcom_resp_read_ok(char* resp)
 
 BaseType_t simcom_parser_task_create(void)
 {
-    BaseType_t ret = xTaskCreate(s_parser_task_fn_, "sim_at_parser", SIM_AT_PARSER_TASK_STACK, NULL, SIM_AT_PARSER_TASK_PRIO, &s_parser_task);
+    BaseType_t ret = xTaskCreate(_s_parser_task_fn, "sim_at_parser", SIM_AT_PARSER_TASK_STACK, NULL, SIM_AT_PARSER_TASK_PRIO, &s_parser_task);
     return ret;
 }
 

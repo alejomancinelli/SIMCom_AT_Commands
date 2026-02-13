@@ -206,7 +206,8 @@ static bool _response_is_urc(const char *line)
 {
     return (
         strstr(line, "+CGEV:") != NULL ||
-        strstr(line, "SMS") != NULL
+        strstr(line, "SMS") != NULL ||
+        strstr(line, "*ISIMAID") != NULL
         // extend as needed
     );
 }

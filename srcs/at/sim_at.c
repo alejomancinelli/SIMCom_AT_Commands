@@ -1,4 +1,3 @@
-
 /**
  * sim_at.c
  * Core AT engine implementation for SIMCom modem (ESP-IDF v5.3)
@@ -39,6 +38,12 @@ static int s_resp_count = 0; // number of stored responses
 
 static char s_line_buf[SIM_AT_MAX_RESP_LEN];
 static int s_line_pos = 0;
+
+/* Last sent command — used to detect and discard echoed lines */
+static char s_last_cmd[SIM_AT_MAX_CMD_LEN];
+
+/* Modem reset flag — set when *ATREADY: 1 is received */
+static volatile bool g_modem_reset = false;
 
 /* protects access to s_pending */
 static SemaphoreHandle_t s_sync_sem = NULL;
@@ -86,6 +91,7 @@ const char *simcom_err_to_str(simcom_err_t err)
     case SIM_AT_ERR_NOT_INIT:       return "SIM_AT_ERR_NOT_INIT";
     case SIM_AT_ERR_OVERFLOW:       return "SIM_AT_ERR_OVERFLOW";
     case SIM_AT_ERR_ABORTED:        return "SIM_AT_ERR_ABORTED";
+    case SIMCOM_ERR_MODEM_RESET:    return "SIMCOM_ERR_MODEM_RESET";
     default:                        return "INVALID ERR";
     }
 
@@ -174,6 +180,31 @@ static void _reset_line_buff(void)
 }
 
 /**
+ * @brief Returns true if the assembled line matches the last sent command.
+ *
+ * The echo is the command string without the trailing CR/LF, so we compare
+ * against s_last_cmd stripped of those characters.
+ *
+ * @param line NUL-terminated line (already CR/LF stripped by the parser)
+ */
+static bool _line_is_echo(const char *line)
+{
+    if (s_last_cmd[0] == '\0')
+        return false;
+
+    /* Build a CR/LF-stripped copy of the last sent command for comparison */
+    char stripped[SIM_AT_MAX_CMD_LEN];
+    strncpy(stripped, s_last_cmd, sizeof(stripped) - 1);
+    stripped[sizeof(stripped) - 1] = '\0';
+
+    int len = strlen(stripped);
+    while (len > 0 && (stripped[len - 1] == '\r' || stripped[len - 1] == '\n'))
+        stripped[--len] = '\0';
+
+    return (strcmp(line, stripped) == 0);
+}
+
+/**
  * @brief Write raw command to UART (blocking) 
  * 
  * @param cmd NUL-Terminated AT Command (e.g. "AT+CGSN\r\n"). Must be <= SIM_AT_MAX_CMD_LEN.
@@ -190,6 +221,10 @@ static simcom_err_t _prv_uart_write_cmd(const char *cmd)
         return SIM_AT_ERR_NOT_INIT;
 
     int len = strlen(cmd);
+
+    /* Store command for echo detection before sending */
+    strncpy(s_last_cmd, cmd, SIM_AT_MAX_CMD_LEN - 1);
+    s_last_cmd[SIM_AT_MAX_CMD_LEN - 1] = '\0';
 
     uart_wait_tx_done(g_cfg->uart_port, pdMS_TO_TICKS(100));
     int written = uart_write_bytes(g_cfg->uart_port, cmd, len);
@@ -210,6 +245,23 @@ static bool _response_is_urc(const char *line)
         strstr(line, "*ISIMAID") != NULL
         // extend as needed
     );
+}
+
+/**
+ * @brief Returns true if the line is the *ATREADY: 1 modem reset URC.
+ *        Sets g_modem_reset flag as a side effect.
+ * 
+ * @param line NUL-terminated line (already CR/LF stripped)
+ */
+static bool _response_is_modem_reset(const char *line)
+{
+    if (strstr(line, "*ATREADY: 1") != NULL)
+    {
+        g_modem_reset = true;
+        ESP_LOGW(TAG, "Modem reset detected (*ATREADY: 1)");
+        return true;
+    }
+    return false;
 }
 
 /* Parser task: reads bytes from UART, assembles lines, routes them */
@@ -259,6 +311,22 @@ static void _s_parser_task_fn(void *arg)
                     continue;
                 }
 
+                /* --- Discard echoed command lines --- */
+                if (_line_is_echo(s_line_buf))
+                {
+                    if (g_debug)
+                        ESP_LOGW(TAG, "Echo discarded: %s", s_line_buf);
+                    _reset_line_buff();
+                    continue;
+                }
+
+                /* --- Detect modem reset URC --- */
+                if (_response_is_modem_reset(s_line_buf))
+                {
+                    _reset_line_buff();
+                    continue;
+                }
+
                 // Write to circular buffer
                 // xSemaphoreTake(s_resp_mutex, portMAX_DELAY); // TODO: Por el momento no pero no es mala
                 if (_response_is_urc(s_line_buf) == false)
@@ -285,30 +353,6 @@ static void _s_parser_task_fn(void *arg)
     }
     free(data);
 }
-
-// TODO: No se si sirve
-// simcom_err_t sim_at_cmd_async(const char *cmd, sim_at_cmd_cb_t cb, void *user_ctx, uint32_t timeout_ms) {
-//     if (!g_inited) return SIM_AT_ERR_NOT_INIT;
-//     if (!cmd) return SIM_AT_ERR_INVALID_ARG;
-//     if (strlen(cmd) >= SIM_AT_MAX_CMD_LEN) return SIM_AT_ERR_INVALID_ARG;
-
-//     xSemaphoreTake(s_sync_sem, portMAX_DELAY);
-//     int idx = prv_find_free_slot_idx();
-//     if (idx < 0) {
-//         xSemaphoreGive(s_sync_sem);
-//         return SIM_AT_ERR_BUSY;
-//     }
-
-//     simcom_err_t r = _prv_uart_write_cmd(cmd);
-//     if (r != SIM_AT_OK) {
-//         /* mark done with uart error */
-//         xSemaphoreTake(s_sync_sem, portMAX_DELAY);
-//         prv_complete_slot(idx, SIM_AT_ERR_UART, -1);
-//         xSemaphoreGive(s_sync_sem);
-//         return r;
-//     }
-//     return SIM_AT_OK;
-// }
 
 simcom_err_t simcom_cmd_sync(const char *cmd, uint32_t timeout_ms)
 {
@@ -394,10 +438,6 @@ simcom_err_t simcom_uart_flush_rx(void)
     return SIM_AT_OK;
 }
 
-// TODO: Falta analizar los casos en que el módulo envía respuestas a eventos que no fueron requeridos,
-// como SMSs o qsy
-// I (3278) sim_at: <-- QCRDY
-// I (3498) sim_at: <-- +CPIN: NOT INSERTED
 bool simcom_get_resp(char *buf)
 {
     if (s_resp_count == 0)
@@ -465,6 +505,16 @@ simcom_responses_err_t simcom_resp_read_ok(char* resp)
         return SIM_AT_RESPONSE_ERR_COMMAND_ERROR;
     
     return SIM_AT_RESPONSE_ERR_COMMAND_INVALID;
+}
+
+bool simcom_was_reset(void)
+{
+    return g_modem_reset;
+}
+
+void simcom_clear_reset(void)
+{
+    g_modem_reset = false;
 }
 
 BaseType_t simcom_parser_task_create(void)

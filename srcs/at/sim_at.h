@@ -55,28 +55,6 @@ void simcom_parser_task_delete(void);
  * ----------------------------------------- 
  */
 
- // TODO: Revisar descripción
- // TODO: Capaz todo esto no sirve porque es para lo de async que medio medio
-/**
- * Response object returned to user callbacks or filled by sync call.
- * The library will not malloc; the caller must provide buffers to receive
- * response data in sync calls. Async callbacks receive a pointer valid only
- * for the duration of the callback (unless user copies contents).
- */
-// typedef struct {
-//     const char *cmd;    // pointer to the command string that originated this response (const view)
-//     const char *raw;    // pointer to raw response buffer (NUL-terminated). Valid only during callback lifetime.
-//     size_t raw_len;     // length of raw response (bytes, excluding NUL)
-//     int final_code;     // 0 = OK, non-zero = ERROR or module-specific numeric error if parsed
-//     void *user_ctx;     // user-provided context pointer
-// } sim_at_response_t;
-
-// /**
-//  * Async completion callback signature.
-//  * Runs in library context (not in caller task). Keep short — do not block.
-//  */
-// typedef void (*sim_at_cmd_cb_t)(const sim_at_response_t *resp);
-
 /**
  * ------------------------------------------
  * ----- [ Core API: issuing commands ] -----
@@ -91,8 +69,9 @@ void simcom_parser_task_delete(void);
  *
  * @return 
  *  - SIM_AT_OK on success
- *  - SIM_AT_ERR_NOT_INIT.
- *  - SIMCOM_ERR_TIMEOUT
+ *  - SIM_AT_ERR_NOT_INIT
+ *  - SIMCOM_ERR_TIMEOUT if the command timed out. Note: if simcom_was_reset() returns
+ *    true after a timeout, the modem reset during the wait — treat as SIMCOM_ERR_MODEM_RESET.
  *  - SIM_AT_ERR_UART
  *
  */
@@ -105,27 +84,11 @@ simcom_err_t simcom_cmd_sync(const char *cmd, uint32_t timeout_ms);
  * 
  * @return
  *  - SIM_AT_OK on success
- *  - SIM_AT_ERR_NOT_INIT.
+ *  - SIM_AT_ERR_NOT_INIT
  *  - SIMCOM_ERR_TIMEOUT
  *  - SIM_AT_ERR_UART
  */
 simcom_err_t simcom_wait_resp(uint32_t timeout_ms);
-
-/**
- * Send an AT command asynchronously.
- *
- * Parameters:
- * - cmd: NUL-terminated AT command; the library will copy the command into an internal static slot (bounded by SIM_AT_MAX_CMD_LEN).
- * - cb: optional callback invoked on completion. If NULL, command is fire-and-forget.
- * - user_ctx: user pointer forwarded into response.user_ctx.
- * - timeout_ms: per-command timeout (0 = default).
- *
- * Note: to avoid dynamic allocation, only SIM_AT_MAX_PENDING_COMMANDS may be queued/in-flight.
- * If queue is full, function returns SIM_AT_ERR_BUSY.
- *
- * The callback executes in the library context; keep it short. The sim_at_response_t::raw pointer passed to cb is only valid during the callback.
- */
-// simcom_err_t sim_at_cmd_async(const char *cmd, sim_at_cmd_cb_t cb, void *user_ctx, uint32_t timeout_ms);
 
 /**
  * ---------------------------------------------
@@ -176,6 +139,43 @@ simcom_responses_err_t simcom_read_resp_values(char* resp, const char* key_word,
 simcom_responses_err_t simcom_resp_read_ok(char* resp);
 
 /**
+ * -----------------------------------------
+ * ----- [ Modem reset detection API ] -----
+ * -----------------------------------------
+ */
+
+/**
+ * @brief Returns true if a modem reset (*ATREADY: 1) was detected since the
+ *        last call to simcom_clear_reset().
+ *
+ * Intended usage in the main task error path:
+ * @code
+ *   err = simcom_cmd_sync("AT+CREG?\r\n", 9000);
+ *   if (err != SIM_AT_OK) {
+ *       if (simcom_was_reset()) {
+ *           simcom_clear_reset();
+ *           // run full re-init sequence, then retry
+ *       }
+ *   }
+ * @endcode
+ *
+ * @note This flag is set by the parser task and read by the main task.
+ *       The flag is declared volatile; no additional locking is needed for
+ *       a single-reader / single-writer scenario.
+ *
+ * @return true if a modem reset was detected, false otherwise
+ */
+bool simcom_was_reset(void);
+
+/**
+ * @brief Clears the modem reset flag.
+ *
+ * Must be called by the main task after it has handled the reset event and
+ * completed the re-initialization sequence (including ATE0).
+ */
+void simcom_clear_reset(void);
+
+/**
  * -----------------------
  * Utility helpers
  * ----------------------- 
@@ -185,17 +185,6 @@ simcom_responses_err_t simcom_resp_read_ok(char* resp);
  * @brief Flush UART RX buffer inside library context.
  */
 simcom_err_t simcom_uart_flush_rx(void);
-
-// TODO: Completar
-/**
- * Lower-level control: toggle DTR/PWRKEY/RST lines if configured.
- * - state: true = asserted (active), false = deasserted.
- * Library will validate configured pins; if pin == -1 returns SIM_AT_ERR_INVALID_ARG.
- * These functions are provided to allow app-managed power sequences.
- */
-// simcom_err_t sim_at_control_dtr(bool state);
-// simcom_err_t sim_at_control_pwrkey(bool state);
-// simcom_err_t sim_at_control_reset(bool state);
 
 /**
  * -----------------------------------

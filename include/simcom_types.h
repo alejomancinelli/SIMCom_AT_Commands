@@ -23,6 +23,7 @@ extern "C" {
     SIM_AT_ERR_OVERFLOW = -8,  /* response too long for provided buffer */
     SIM_AT_ERR_ABORTED = -9,
     SIM_AT_ERR_RESPONSE = -10,
+    SIMCOM_ERR_MODEM_RESET = -11,
 } simcom_err_t;
 // TODO: Completar con los errores que faltan capaz?
 

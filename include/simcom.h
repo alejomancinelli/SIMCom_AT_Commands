@@ -227,6 +227,9 @@ const char* simcom_net_stat_to_str(sim_network_registration_stat_t stat);
 
 // TODO: COPS por el momento no se utiliza, pero podría ser necesaria
 
+//DEBUG TOMI
+simcom_err_t simcom_get_operator(simcom_operator_info_t *op);
+
 
 /* ================================================= */
 /* =============== [ Packet Domain ] =============== */

@@ -5,6 +5,24 @@
 extern "C" {
 #endif
 
+//TOMI DEBUG:
+/**
+ * ------------------------------------
+ * ----- [ Operador de Red ] -----
+ * ------------------------------------ 
+ */
+
+typedef struct {
+    int mode;
+    int format;
+    char operator_name[64];
+    int act;
+    
+    int mcc;
+    int mnc;
+} simcom_operator_info_t;
+
+
 /**
  * ------------------------------------
  * ----- [ Error / status codes ] -----

@@ -230,6 +230,7 @@ const char* simcom_net_stat_to_str(sim_network_registration_stat_t stat);
 //DEBUG TOMI
 simcom_err_t simcom_get_operator(simcom_operator_info_t *op);
 simcom_err_t simcom_wait_modem_ready(void);
+simcom_err_t simcom_set_operator_selection(sim_cops_mode_t mode);
 
 
 /* ================================================= */

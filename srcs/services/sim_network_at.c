@@ -4,7 +4,7 @@
 static const char *TAG = "network_at";
 
 
-//TOMI DEBUG:
+//TOMI DEBUG: Gets the current operator in MCC/MNC format
 simcom_err_t simcom_get_operator(simcom_operator_info_t *op)
 {
     simcom_err_t err = simcom_cmd_sync("AT+CPSI?\r\n", 9000);
@@ -76,6 +76,33 @@ simcom_err_t simcom_get_operator(simcom_operator_info_t *op)
     if (resp_err != SIM_AT_RESPONSE_COMMAND_OK)
     {
         ESP_LOGE(TAG, "OK not received for AT+CPSI?");
+        return SIM_AT_ERR_RESPONSE;
+    }
+
+    return SIM_AT_OK;
+}
+
+//Configura el modo de selección del operador: (manual/automático)
+simcom_err_t simcom_set_operator_selection(sim_cops_mode_t mode)
+{
+    //Build command
+    char cmd[32];
+    snprintf(cmd, sizeof(cmd), "AT+COPS=%d\r\n", mode);
+
+    // Send command
+    simcom_err_t err = simcom_cmd_sync(cmd, 180000); // 180s: spec allows up to 3min for network search
+    if (err != SIM_AT_OK)
+    {
+        ESP_LOGE(TAG, "Error sending AT+COPS=%d command: %s", mode, simcom_err_to_str(err));
+        return err;
+    }
+
+    // AT+COPS= only returns OK, no "+COPS:" prefix to parse
+    char resp[SIM_AT_MAX_RESP_LEN];
+    simcom_responses_err_t resp_err = simcom_resp_read_ok(resp);
+    if (resp_err != SIM_AT_RESPONSE_COMMAND_OK)
+    {
+        ESP_LOGE(TAG, "Ok response was not received: %s", simcom_resp_err_to_str(resp_err));
         return SIM_AT_ERR_RESPONSE;
     }
 

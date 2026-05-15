@@ -111,6 +111,22 @@ typedef enum {
     PDP_IPV4V6,
 } sim_pdp_type_t;
 
+
+/**
+ * ------------------------------------
+ * ----- [ Operator Select Mode ] -----
+ * ------------------------------------
+ */
+
+typedef enum {
+    COPS_MODE_AUTOMATIC   = 0,
+    COPS_MODE_MANUAL      = 1,
+    COPS_MODE_DEREGISTER  = 2,
+    COPS_MODE_SET_ONLY    = 3,  // formato solamente, sin registrar
+    COPS_MODE_MANUAL_AUTO = 4,  // manual, fallback automático si falla
+} sim_cops_mode_t;
+
+
 /**
  * ----------------------------------
  * ----- [ SIM Card Pin codes ] -----

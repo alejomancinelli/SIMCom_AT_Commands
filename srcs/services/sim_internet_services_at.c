@@ -44,7 +44,7 @@ simcom_err_t simcom_ntp_config_set(const char* host, int timezone)
     // Command
     char cmd[SIM_AT_MAX_CMD_LEN];
     snprintf(cmd, SIM_AT_MAX_CMD_LEN, "AT+CNTP=\"%s\",%d\r\n", host, configTimezone);
-    
+
     // Send command
     simcom_err_t err = simcom_cmd_sync(cmd, 9000);
     if (err != SIM_AT_OK)

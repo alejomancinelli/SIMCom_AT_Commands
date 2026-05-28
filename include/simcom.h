@@ -51,6 +51,16 @@ simcom_err_t simcom_deinit(void);
 
 simcom_err_t simcom_control_pwrkey(bool state);
 
+//DEBUG TOMI TODO!!!!! Ver si queda
+/* ================================================== */
+/* =============== [ Raw AT Commands ] ============== */
+/* ================================================== */
+simcom_err_t simcom_cmd_sync(const char *cmd, uint32_t timeout_ms);
+simcom_err_t simcom_wait_resp(uint32_t timeout_ms);
+bool         simcom_get_resp(char *buf);
+void         simcom_ignore_resp(void);
+simcom_responses_err_t simcom_read_resp_values(char *resp, const char *key_word, char **index);
+simcom_responses_err_t simcom_resp_read_ok(char *resp);
 
 /* ================================================== */
 /* =============== [ Basic Commands ] =============== */

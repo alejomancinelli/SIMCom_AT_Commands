@@ -242,7 +242,11 @@ static bool _response_is_urc(const char *line)
     return (
         strstr(line, "+CGEV:") != NULL ||
         strstr(line, "SMS") != NULL ||
-        strstr(line, "*ISIMAID") != NULL
+        strstr(line, "*ISIMAID") != NULL ||
+        strstr(line, "+SIMCARD:") != NULL ||
+        strstr(line, "+MSTK:") != NULL ||
+        strstr(line, "PB DONE") != NULL   //TOMI TODO: OJO CHEQUEAR
+
         // extend as needed
     );
 }

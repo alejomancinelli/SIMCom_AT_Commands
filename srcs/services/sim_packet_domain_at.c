@@ -337,45 +337,93 @@ simcom_err_t simcom_set_pdp_context(int cid, sim_pdp_type_t pdp_type, const char
     return SIM_AT_OK; 
 }
 
-// !!! Funcion de Ale!!!!
-// simcom_err_t simcom_show_pdp_addr(int* cid, char* addr)
-// {
-//     // Sends command
-//     simcom_err_t err = simcom_cmd_sync("AT+CGPADDR\r\n", 9000);
-//     if (err != SIM_AT_OK)
-//     {   
-//         ESP_LOGE(TAG, "Error with AT+CGPADDR command: %s", simcom_err_to_str(err));
-//         return err;
-//     }
-    
-//     // Reads response
-//     char resp[SIM_AT_MAX_RESP_LEN];
-//     char *data;
-//     simcom_responses_err_t resp_err = simcom_read_resp_values(resp, "+CGPADDR", &data);
-//     if (resp_err != SIM_AT_RESPONSE_OK)
-//     {
-//         ESP_LOGE(TAG, "Error with AT+CGPADDR response: %s", simcom_resp_err_to_str(resp_err));
-//         return SIM_AT_ERR_RESPONSE;
-//     }
-    
-//     // Parse two integers separated by a comma
-//     if (sscanf(data, "%d,%s", cid, addr) != 2)
-//         return SIM_AT_ERR_RESPONSE;
-    
-//     // TODO: En caso que haya muchos contextos de PDP podría haber problemas al leer las respuestas
-//     // Ver bien como hacer eso
-//     // Capaz controlar hasta que se reciba un OK
+//Gets APN from SIMCard, automatically if provided or manually using the APN table.
+simcom_err_t simcom_get_apn_from_sim(char *apn_out, size_t len)
+{
+    if (apn_out == NULL || len == 0)
+        return SIM_AT_ERR_INVALID_ARG;
 
-//     // Read OK responss
-//     resp_err = simcom_resp_read_ok(resp);
-//     if (resp_err != SIM_AT_RESPONSE_COMMAND_OK)
-//     {
-//         ESP_LOGE(TAG, "Ok response was not received: %s", simcom_resp_err_to_str(resp_err));
-//         return SIM_AT_ERR_RESPONSE;
-//     }
+    char resp[SIM_AT_MAX_RESP_LEN];
+    char *data = NULL;
 
-//     return SIM_AT_OK; 
-// }
+    //Chequear si el APN fue provisto por la SIM automáticamente
+    simcom_err_t err = simcom_cmd_sync("AT+CGDCONT?\r\n", 2000);
+    if (err == SIM_AT_OK)
+    {
+        simcom_responses_err_t r =
+            simcom_read_resp_values(resp, "+CGDCONT", &data);
+
+        if (r == SIM_AT_RESPONSE_OK && data != NULL)
+        {
+            int cid;
+            char type[16];
+            char apn[64];
+
+            //Msg típico: +CGDCONT: 1,"IP","internet"
+            if (sscanf(data, "%d,\"%15[^\"]\",\"%63[^\"]\"",
+                       &cid, type, apn) == 3)
+            {
+                if (apn[0] != '\0')
+                {
+                    strncpy(apn_out, apn, len - 1);
+                    apn_out[len - 1] = '\0';
+
+                    ESP_LOGI(TAG, "APN from modem: %s", apn_out);
+                    return SIM_AT_OK;
+                }
+            }
+        }
+    }
+
+    // -- Si no fue provisto, asignarlo por tabla de APNs -- 
+
+    err = simcom_cmd_sync("AT+CIMI\r\n", 2000);
+    if (err != SIM_AT_OK)
+        goto fallback;
+
+    char imsi_resp[SIM_AT_MAX_RESP_LEN];
+    char *imsi_data = NULL;
+
+    simcom_responses_err_t resp_err =
+        simcom_read_resp_values(imsi_resp, "+CIMI", &imsi_data);
+
+    if (resp_err == SIM_AT_RESPONSE_OK && imsi_data)
+    {
+        char imsi[32] = {0};
+        sscanf(imsi_data, "%31s", imsi);
+
+        const char *apn = "datos.personal.com"; //Default
+
+        for (size_t i = 0; i < APN_TABLE_SIZE; i++)
+        {
+            size_t lenp = strlen(apn_table[i].prefix);
+
+            if (strncmp(imsi, apn_table[i].prefix, lenp) == 0)
+            {
+                apn = apn_table[i].apn;
+                ESP_LOGI(TAG, "SIM operator: %s", apn_table[i].provider_name);
+                break;
+            }
+        }
+
+        strncpy(apn_out, apn, len - 1);
+        apn_out[len - 1] = '\0';
+
+        ESP_LOGI(TAG, "APN from IMSI table: %s", apn_out);
+        return SIM_AT_OK;
+    }
+
+fallback:
+
+    //Asignar APN personal
+    strncpy(apn_out, "datos.personal.com", len - 1);
+    apn_out[len - 1] = '\0';
+
+    ESP_LOGW(TAG, "Using fallback APN: %s", apn_out);
+
+    return SIM_AT_OK;
+}
+
 
 //TOMI: Function moded para leer todas las responses pero solo almacenar CID=1, a modo de evitar
 //      error del parser por lecturas basura en la UART

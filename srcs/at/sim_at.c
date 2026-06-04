@@ -498,6 +498,7 @@ simcom_responses_err_t simcom_read_resp_values(char* resp, const char* key_word,
     return SIM_AT_RESPONSE_OK;
 }
 
+
 simcom_responses_err_t simcom_resp_read_ok(char* resp)
 {
     // Get responses

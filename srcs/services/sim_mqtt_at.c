@@ -47,9 +47,53 @@ const char* simcom_mqtt_err_to_str(sim_mqtt_err_codes_t err)
     }
 }
 
+// simcom_err_t simcom_mqtt_service_start(void)
+// {
+//     // Send command
+//     simcom_err_t err = simcom_cmd_sync("AT+CMQTTSTART\r\n", 12000);
+//     if (err != SIM_AT_OK)
+//     {   
+//         ESP_LOGE(TAG, "Error with AT+CMQTTSTART commands: %s", simcom_err_to_str(err));
+//         return err;
+//     }
+
+//     // TODO: Si devuelve ERROR es que ya se encuentra inicializado
+
+//     // Read OK responss
+//     char resp[SIM_AT_MAX_RESP_LEN];
+//     simcom_responses_err_t resp_err = simcom_resp_read_ok(resp);
+//     if (resp_err != SIM_AT_RESPONSE_COMMAND_OK)
+//     {
+//         ESP_LOGE(TAG, "Ok response was not received: %s", simcom_resp_err_to_str(resp_err));
+//         return SIM_AT_ERR_RESPONSE;
+//     } 
+    
+//     // Parse response
+//     char *data;
+//     resp_err = simcom_read_resp_values(resp, "+CMQTTSTART", &data);
+//     if (resp_err != SIM_AT_RESPONSE_OK)
+//     {
+//         ESP_LOGE(TAG, "Error with AT+CNTP response: %s", simcom_resp_err_to_str(resp_err));
+//         return SIM_AT_ERR_RESPONSE;
+//     }  
+    
+//     int err_code;
+//     if (sscanf(data, "%d", &err_code) != 1)
+//         return SIM_AT_ERR_RESPONSE;
+
+
+//     if (err_code != SIM_MQTT_OK)
+//     {
+//         ESP_LOGE(TAG, "Error starting MQTT service: %s", simcom_mqtt_err_to_str(err_code));
+//         return SIM_AT_ERR_INTERNAL;
+//     }
+
+//     return SIM_AT_OK;
+// }
+
 simcom_err_t simcom_mqtt_service_start(void)
 {
-    // Send command
+    //Enviar comando
     simcom_err_t err = simcom_cmd_sync("AT+CMQTTSTART\r\n", 12000);
     if (err != SIM_AT_OK)
     {   
@@ -57,30 +101,36 @@ simcom_err_t simcom_mqtt_service_start(void)
         return err;
     }
 
-    // TODO: Si devuelve ERROR es que ya se encuentra inicializado
-
-    // Read OK responss
+    //Leer OK (o ERROR si ya inició)
     char resp[SIM_AT_MAX_RESP_LEN];
     simcom_responses_err_t resp_err = simcom_resp_read_ok(resp);
+
+    if (strstr(resp, "ERROR") != NULL)
+    {
+        ESP_LOGW(TAG, "MQTT ya se encuentra inicializado (ERROR response)");
+        return SIM_AT_ERR_RESPONSE; 
+    }
+    
     if (resp_err != SIM_AT_RESPONSE_COMMAND_OK)
     {
         ESP_LOGE(TAG, "Ok response was not received: %s", simcom_resp_err_to_str(resp_err));
         return SIM_AT_ERR_RESPONSE;
     } 
-    
-    // Parse response
-    char *data;
+
+    // -- Parse response --
+    char *data = NULL;
     resp_err = simcom_read_resp_values(resp, "+CMQTTSTART", &data);
+    
     if (resp_err != SIM_AT_RESPONSE_OK)
     {
-        ESP_LOGE(TAG, "Error with AT+CNTP response: %s", simcom_resp_err_to_str(resp_err));
+        ESP_LOGE(TAG, "Error con la respuesta +CMQTTSTART: %s", simcom_resp_err_to_str(resp_err));
         return SIM_AT_ERR_RESPONSE;
-    }  
+    }   
     
+    //Extraer el código de error
     int err_code;
     if (sscanf(data, "%d", &err_code) != 1)
         return SIM_AT_ERR_RESPONSE;
-
 
     if (err_code != SIM_MQTT_OK)
     {
@@ -88,6 +138,7 @@ simcom_err_t simcom_mqtt_service_start(void)
         return SIM_AT_ERR_INTERNAL;
     }
 
+    //Si todo salió bien, devolver OK!
     return SIM_AT_OK;
 }
 

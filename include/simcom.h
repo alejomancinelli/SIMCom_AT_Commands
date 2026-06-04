@@ -13,7 +13,7 @@ extern "C" {
 #include "simcom_types.h"
 #include "simcom_config.h"
 
-
+// -- APN TABLE -- 
 // -- Tabla de APNs típicas de Argentina -- 
 //TODO: Ir actualizando según salgan nuevos operadores
 typedef struct {

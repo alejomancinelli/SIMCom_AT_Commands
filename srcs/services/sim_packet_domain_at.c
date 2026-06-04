@@ -337,62 +337,33 @@ simcom_err_t simcom_set_pdp_context(int cid, sim_pdp_type_t pdp_type, const char
     return SIM_AT_OK; 
 }
 
+
 //Gets APN from SIMCard, automatically if provided or manually using the APN table.
 simcom_err_t simcom_get_apn_from_sim(char *apn_out, size_t len)
 {
     if (apn_out == NULL || len == 0)
         return SIM_AT_ERR_INVALID_ARG;
 
-    char resp[SIM_AT_MAX_RESP_LEN];
-    char *data = NULL;
-
-    //Chequear si el APN fue provisto por la SIM automáticamente
-    simcom_err_t err = simcom_cmd_sync("AT+CGDCONT?\r\n", 2000);
-    if (err == SIM_AT_OK)
-    {
-        simcom_responses_err_t r =
-            simcom_read_resp_values(resp, "+CGDCONT", &data);
-
-        if (r == SIM_AT_RESPONSE_OK && data != NULL)
-        {
-            int cid;
-            char type[16];
-            char apn[64];
-
-            //Msg típico: +CGDCONT: 1,"IP","internet"
-            if (sscanf(data, "%d,\"%15[^\"]\",\"%63[^\"]\"",
-                       &cid, type, apn) == 3)
-            {
-                if (apn[0] != '\0')
-                {
-                    strncpy(apn_out, apn, len - 1);
-                    apn_out[len - 1] = '\0';
-
-                    ESP_LOGI(TAG, "APN from modem: %s", apn_out);
-                    return SIM_AT_OK;
-                }
-            }
-        }
-    }
-
-    // -- Si no fue provisto, asignarlo por tabla de APNs -- 
-
-    err = simcom_cmd_sync("AT+CIMI\r\n", 2000);
+    // -- Buscar APN por tabla de IMSI -- 
+    simcom_err_t err = simcom_cmd_sync("AT+CIMI\r\n", 2000);
     if (err != SIM_AT_OK)
         goto fallback;
 
     char imsi_resp[SIM_AT_MAX_RESP_LEN];
-    char *imsi_data = NULL;
 
-    simcom_responses_err_t resp_err =
-        simcom_read_resp_values(imsi_resp, "+CIMI", &imsi_data);
-
-    if (resp_err == SIM_AT_RESPONSE_OK && imsi_data)
+    // Sacamos la línea cruda directamente del ring buffer
+    if (simcom_get_resp(imsi_resp))
     {
         char imsi[32] = {0};
-        sscanf(imsi_data, "%31s", imsi);
+        // sscanf limpia los bytes y copia solo el número de IMSI
+        sscanf(imsi_resp, "%31s", imsi);
 
-        const char *apn = "datos.personal.com"; //Default
+        // Sacamos el "OK" que quedó flotando en el buffer para dejarlo limpio
+        char discard_ok[SIM_AT_MAX_RESP_LEN];
+        simcom_get_resp(discard_ok);
+
+        // Buscamos el operador en la tabla
+        const char *apn = "datos.personal.com"; // Default por si no matchea ninguno
 
         for (size_t i = 0; i < APN_TABLE_SIZE; i++)
         {
@@ -415,7 +386,7 @@ simcom_err_t simcom_get_apn_from_sim(char *apn_out, size_t len)
 
 fallback:
 
-    //Asignar APN personal
+    // Asignar APN personal por defecto si falla el CIMI o el buffer
     strncpy(apn_out, "datos.personal.com", len - 1);
     apn_out[len - 1] = '\0';
 

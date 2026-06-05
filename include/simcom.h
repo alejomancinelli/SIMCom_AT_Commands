@@ -68,7 +68,6 @@ simcom_err_t simcom_deinit(void);
 
 simcom_err_t simcom_control_pwrkey(bool state);
 
-//DEBUG TOMI TODO!!!!! Ver si queda
 /* ================================================== */
 /* =============== [ Raw AT Commands ] ============== */
 /* ================================================== */
@@ -251,10 +250,9 @@ simcom_err_t simcom_net_reg(sim_network_registration_stat_t* stat);
  * @return A string with the status code description
  */
 const char* simcom_net_stat_to_str(sim_network_registration_stat_t stat);
-
 // TODO: COPS por el momento no se utiliza, pero podría ser necesaria
 
-//DEBUG TOMI
+
 simcom_err_t simcom_get_operator(simcom_operator_info_t *op);
 simcom_err_t simcom_wait_modem_ready(void);
 simcom_err_t simcom_set_operator_selection(sim_cops_mode_t mode);

@@ -544,7 +544,6 @@ simcom_err_t simcom_mqtt_server_connect(int client_index, const char* server_add
     return SIM_AT_ERR_RESPONSE;
 }
 
-//TODO: Cambiar ocmments!!!
 simcom_err_t simcom_mqtt_server_disconnect(int client_index, int timeout)
 {
     //Initial checks

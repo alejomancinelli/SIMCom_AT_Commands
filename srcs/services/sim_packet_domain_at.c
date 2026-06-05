@@ -482,7 +482,5 @@ simcom_err_t simcom_ping(const char* dest_addr)
         return SIM_AT_ERR_RESPONSE;
     }
 
-    // TODO: Ignora los resultados del ping, solamente verifica el Ok.
-
     return SIM_AT_OK; 
 }

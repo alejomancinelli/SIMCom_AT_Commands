@@ -245,7 +245,7 @@ static bool _response_is_urc(const char *line)
         strstr(line, "*ISIMAID") != NULL ||
         strstr(line, "+SIMCARD:") != NULL ||
         strstr(line, "+MSTK:") != NULL ||
-        strstr(line, "PB DONE") != NULL   //TOMI TODO: OJO CHEQUEAR
+        strstr(line, "PB DONE") != NULL  
 
         // extend as needed
     );

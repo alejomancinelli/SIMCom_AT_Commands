@@ -339,62 +339,84 @@ simcom_err_t simcom_set_pdp_context(int cid, sim_pdp_type_t pdp_type, const char
 
 
 //Gets APN from SIMCard, automatically if provided or manually using the APN table.
-simcom_err_t simcom_get_apn_from_sim(char *apn_out, size_t len)
+// simcom_err_t simcom_get_apn_from_sim(char *apn_out, size_t len)
+// {
+//     if (apn_out == NULL || len == 0)
+//         return SIM_AT_ERR_INVALID_ARG;
+
+//     // -- Buscar APN por tabla de IMSI -- 
+//     simcom_err_t err = simcom_cmd_sync("AT+CIMI\r\n", 2000);
+//     if (err != SIM_AT_OK)
+//         goto fallback;
+
+//     char imsi_resp[SIM_AT_MAX_RESP_LEN];
+
+//     // Sacamos la línea cruda directamente del ring buffer
+//     if (simcom_get_resp(imsi_resp))
+//     {
+//         char imsi[32] = {0};
+//         // sscanf limpia los bytes y copia solo el número de IMSI
+//         sscanf(imsi_resp, "%31s", imsi);
+
+//         // Sacamos el "OK" que quedó flotando en el buffer para dejarlo limpio
+//         char discard_ok[SIM_AT_MAX_RESP_LEN];
+//         simcom_get_resp(discard_ok);
+
+//         // Buscamos el operador en la tabla
+//         const char *apn = "datos.personal.com"; // Default por si no matchea ninguno
+
+//         for (size_t i = 0; i < APN_TABLE_SIZE; i++)
+//         {
+//             size_t lenp = strlen(apn_table[i].prefix);
+
+//             if (strncmp(imsi, apn_table[i].prefix, lenp) == 0)
+//             {
+//                 apn = apn_table[i].apn;
+//                 ESP_LOGI(TAG, "SIM operator: %s", apn_table[i].provider_name);
+//                 break;
+//             }
+//         }
+
+//         strncpy(apn_out, apn, len - 1);
+//         apn_out[len - 1] = '\0';
+
+//         ESP_LOGI(TAG, "APN from IMSI table: %s", apn_out);
+//         return SIM_AT_OK;
+//     }
+
+// fallback:
+
+//     // Asignar APN personal por defecto si falla el CIMI o el buffer
+//     strncpy(apn_out, "datos.personal.com", len - 1);
+//     apn_out[len - 1] = '\0';
+
+//     ESP_LOGW(TAG, "Using fallback APN: %s", apn_out);
+
+//     return SIM_AT_OK;
+// }
+
+
+//Reads the IMSI (Operator identifier) from the SIMCard inserted
+simcom_err_t simcom_get_imsi(char *imsi_out, size_t len)
 {
-    if (apn_out == NULL || len == 0)
+    if (imsi_out == NULL || len == 0)
         return SIM_AT_ERR_INVALID_ARG;
 
-    // -- Buscar APN por tabla de IMSI -- 
     simcom_err_t err = simcom_cmd_sync("AT+CIMI\r\n", 2000);
     if (err != SIM_AT_OK)
-        goto fallback;
+        return err;
 
-    char imsi_resp[SIM_AT_MAX_RESP_LEN];
-
-    // Sacamos la línea cruda directamente del ring buffer
-    if (simcom_get_resp(imsi_resp))
+    char resp[SIM_AT_MAX_RESP_LEN];
+    if (simcom_get_resp(resp))
     {
-        char imsi[32] = {0};
-        // sscanf limpia los bytes y copia solo el número de IMSI
-        sscanf(imsi_resp, "%31s", imsi);
-
-        // Sacamos el "OK" que quedó flotando en el buffer para dejarlo limpio
-        char discard_ok[SIM_AT_MAX_RESP_LEN];
-        simcom_get_resp(discard_ok);
-
-        // Buscamos el operador en la tabla
-        const char *apn = "datos.personal.com"; // Default por si no matchea ninguno
-
-        for (size_t i = 0; i < APN_TABLE_SIZE; i++)
-        {
-            size_t lenp = strlen(apn_table[i].prefix);
-
-            if (strncmp(imsi, apn_table[i].prefix, lenp) == 0)
-            {
-                apn = apn_table[i].apn;
-                ESP_LOGI(TAG, "SIM operator: %s", apn_table[i].provider_name);
-                break;
-            }
-        }
-
-        strncpy(apn_out, apn, len - 1);
-        apn_out[len - 1] = '\0';
-
-        ESP_LOGI(TAG, "APN from IMSI table: %s", apn_out);
+        sscanf(resp, "%31s", imsi_out);
+        char discard[SIM_AT_MAX_RESP_LEN];
+        simcom_get_resp(discard); // consume OK
         return SIM_AT_OK;
     }
 
-fallback:
-
-    // Asignar APN personal por defecto si falla el CIMI o el buffer
-    strncpy(apn_out, "datos.personal.com", len - 1);
-    apn_out[len - 1] = '\0';
-
-    ESP_LOGW(TAG, "Using fallback APN: %s", apn_out);
-
-    return SIM_AT_OK;
+    return SIM_AT_ERR_INTERNAL;
 }
-
 
 //TOMI: Function moded para leer todas las responses pero solo almacenar CID=1, a modo de evitar
 //      error del parser por lecturas basura en la UART

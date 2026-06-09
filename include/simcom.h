@@ -16,18 +16,18 @@ extern "C" {
 // -- APN TABLE -- 
 // -- Tabla de APNs típicas de Argentina -- 
 //TODO: Ir actualizando según salgan nuevos operadores
-typedef struct {
-    const char *prefix;
-    const char *apn;
-    const char *provider_name;
-} simcom_apn_mapping_t;
+// typedef struct {
+//     const char *prefix;
+//     const char *apn;
+//     const char *provider_name;
+// } simcom_apn_mapping_t;
 
-static const simcom_apn_mapping_t apn_table[] = {
-    { "72234",  "datos.personal.com", "Personal" },
-    { "72207",  "gprs.unifon.com.ar", "Movistar" },
-    { "722310", "igprs.claro.com.ar", "Claro" }
-};
-#define APN_TABLE_SIZE (sizeof(apn_table) / sizeof(apn_table[0]))
+// static const simcom_apn_mapping_t apn_table[] = {
+//     { "72234",  "datos.personal.com", "Personal" },
+//     { "72207",  "gprs.unifon.com.ar", "Movistar" },
+//     { "722310", "igprs.claro.com.ar", "Claro" }
+// };
+// #define APN_TABLE_SIZE (sizeof(apn_table) / sizeof(apn_table[0]))
 
 
 /**
@@ -427,7 +427,10 @@ simcom_err_t simcom_ping(const char* dest_addr);
  * @return SIM_AT_OK on success, SIM_AT_ERR_INVALID_ARG if parameters are invalid,
  *         or SIM_AT_ERR_RESPONSE if parsing fails critically.
  */
-simcom_err_t simcom_get_apn_from_sim(char *apn_out, size_t len);
+// simcom_err_t simcom_get_apn_from_sim(char *apn_out, size_t len);
+struct apn_table_t;
+typedef struct apn_table_t apn_table_t;
+simcom_err_t simcom_get_imsi(char *imsi_out, size_t len);
 
 
 /* ============================================ */

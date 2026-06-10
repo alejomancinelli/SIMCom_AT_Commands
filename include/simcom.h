@@ -13,23 +13,6 @@ extern "C" {
 #include "simcom_types.h"
 #include "simcom_config.h"
 
-// -- APN TABLE -- 
-// -- Tabla de APNs típicas de Argentina -- 
-//TODO: Ir actualizando según salgan nuevos operadores
-// typedef struct {
-//     const char *prefix;
-//     const char *apn;
-//     const char *provider_name;
-// } simcom_apn_mapping_t;
-
-// static const simcom_apn_mapping_t apn_table[] = {
-//     { "72234",  "datos.personal.com", "Personal" },
-//     { "72207",  "gprs.unifon.com.ar", "Movistar" },
-//     { "722310", "igprs.claro.com.ar", "Claro" }
-// };
-// #define APN_TABLE_SIZE (sizeof(apn_table) / sizeof(apn_table[0]))
-
-
 /**
  * -----------------------------------
  * ----- [ Core API: lifecycle ] -----
@@ -410,26 +393,7 @@ simcom_err_t simcom_show_pdp_addr(int* cid, char* addr);
  */
 simcom_err_t simcom_ping(const char* dest_addr);
 
-/**
- * @brief Retrieves the APN to be used for PDP context configuration.
- *
- * This function attempts to obtain the APN currently provisioned in the modem
- * via the active PDP context configuration (AT+CGDCONT?).
- *
- * If no valid APN is found in the modem configuration, it falls back to IMSI-based
- * operator detection using the SIM identifier (AT+CIMI) and an internal APN table.
- *
- * The resulting APN is always guaranteed to be valid (either modem-provided or fallback).
- *
- * @param apn_out Buffer where the resulting APN string will be stored.
- * @param len Size of the output buffer.
- *
- * @return SIM_AT_OK on success, SIM_AT_ERR_INVALID_ARG if parameters are invalid,
- *         or SIM_AT_ERR_RESPONSE if parsing fails critically.
- */
-// simcom_err_t simcom_get_apn_from_sim(char *apn_out, size_t len);
-struct apn_table_t;
-typedef struct apn_table_t apn_table_t;
+/*Gets IMSI SIM identificator (gives info about the Provider) */
 simcom_err_t simcom_get_imsi(char *imsi_out, size_t len);
 
 

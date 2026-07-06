@@ -708,65 +708,52 @@ simcom_err_t simcom_mqtt_payload_set(int client_index, const char* payload)
 
 simcom_err_t simcom_mqtt_publish(int client_index, int qos, int pub_timeout)
 {
-    // Sanity checks
     if (client_index != 0 && client_index != 1)
         return SIM_AT_ERR_INVALID_ARG;
     if (qos < 0 || qos > 2)
         return SIM_AT_ERR_INVALID_ARG;
     if (pub_timeout < 1 || pub_timeout > 180)
         return SIM_AT_ERR_INVALID_ARG;
-        
-    // Build command
+
     char cmd[SIM_AT_MAX_CMD_LEN];
     snprintf(cmd, SIM_AT_MAX_CMD_LEN, "AT+CMQTTPUB=%d,%d,%d\r\n", client_index, qos, pub_timeout);
-    
-    // Send command
+
     simcom_err_t err = simcom_cmd_sync(cmd, pub_timeout * 1000);
     if (err != SIM_AT_OK)
-    {   
+    {
         ESP_LOGE(TAG, "Error with AT+CMQTTPUB commands: %s", simcom_err_to_str(err));
         return err;
     }
-    
-    // Parse response
+
+    // Esperar la URC real +CMQTTPUB, no asumir con el OK inicial
     char resp[SIM_AT_MAX_RESP_LEN];
-    char *data;
-    simcom_responses_err_t resp_err = simcom_read_resp_values(resp, "+CMQTTPUB", &data);   
-    
-    // Volvemos a leer para atrapar el dato real
-    if (resp_err == SIM_AT_RESPONSE_COMMAND_OK)
+    char *data = NULL;
+    simcom_responses_err_t resp_err = SIM_AT_RESPONSE_ERR_COMMAND_ERROR;
+
+    int max_tries = (pub_timeout * 1000) / 200; // cubrir todo el timeout pedido
+    for (int i = 0; i < max_tries; i++)
     {
         resp_err = simcom_read_resp_values(resp, "+CMQTTPUB", &data);
+        if (resp_err == SIM_AT_RESPONSE_OK)
+            break;
+        vTaskDelay(pdMS_TO_TICKS(200));
     }
 
-    // Evaluamos el resultado final
-    if (resp_err == SIM_AT_RESPONSE_OK)
+    if (resp_err != SIM_AT_RESPONSE_OK)
     {
-        int aux, err_code;
-        if (sscanf(data, "%d,%d", &aux, &err_code) != 2)
-            return SIM_AT_ERR_RESPONSE;
-        
-        // Verificamos el código de error devuelto por el módulo
-        if (err_code != SIM_MQTT_OK)
-        {
-            ESP_LOGE(TAG, "Error publishing MQTT message: %s", simcom_mqtt_err_to_str(err_code));
-            return SIM_AT_ERR_RESPONSE;
-        }
-        
-        // ¡Si llegamos aquí, se publicó con éxito!
-        return SIM_AT_OK;   
-    }
-    else if (resp_err == SIM_AT_RESPONSE_ERR_COMMAND_ERROR)
-    {
-        ESP_LOGE(TAG, "Command error from SIMCOM module during publish");
+        ESP_LOGE(TAG, "No +CMQTTPUB URC received");
         return SIM_AT_ERR_RESPONSE;
     }
-    
-    //Parser error fix:
-    // Si llegó acá es porque resp_err dio timeout/error esperando el URC.
-    // Pero como err == SIM_AT_OK (controlado arriba), sabemos que el módem respondió OK.
-    // Asumimos que el +CMQTTPUB llegó pegado y fue descartado por el driver.
-    ESP_LOGW(TAG, "Command received OK. Chequear manualmente +CMQTTPUB");
+
+    int aux, err_code;
+    if (sscanf(data, "%d,%d", &aux, &err_code) != 2)
+        return SIM_AT_ERR_RESPONSE;
+
+    if (err_code != SIM_MQTT_OK)
+    {
+        ESP_LOGE(TAG, "Error publishing MQTT message: %s", simcom_mqtt_err_to_str(err_code));
+        return SIM_AT_ERR_RESPONSE;
+    }
+
     return SIM_AT_OK;
 }
-
